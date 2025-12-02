@@ -1,0 +1,262 @@
+:root{
+  --bg: #121212;
+  --muted: #9aa3ad;
+  --glass-border: rgba(255,255,255,0.05);
+  --accent: #1e88e5;
+  --radius: 12px;
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+/* base reset */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
+.app{max-width:1200px;margin:28px auto;padding:20px}
+.app-header h1{margin:0;font-size:20px}
+.subtitle{color:var(--muted);margin-top:6px;font-size:13px}
+
+/* layout */
+.layout-grid{
+  display:grid;
+  grid-template-columns: 440px 1fr;
+  gap:32px;
+  align-items:start;
+}
+
+/* card */
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  min-width:0;
+}
+
+/* left column form */
+.left-col{
+  width:440px;
+  max-width:100%;
+  padding:22px;
+  position:relative;
+}
+.left-col h2{margin:0 0 8px 0;font-size:14px}
+.grid-2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  align-items:start;
+}
+.label-title{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+
+/* inputs */
+label{display:flex;flex-direction:column;font-size:13px;color:var(--muted);min-width:0}
+input[type=number]{
+  width:100%;
+  box-sizing:border-box;
+  background:rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.03);
+  padding:10px 12px;
+  border-radius:8px;
+  color:#eaf3ff;
+  min-height:40px;
+}
+input::placeholder{color:rgba(255,255,255,0.12)}
+
+/* actions */
+.form-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#26c6da);color:#fff}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+.btn.outline{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff}
+
+/* right */
+.right-col{display:flex;flex-direction:column;gap:18px;position:relative}
+
+/* thermo */
+.thermo-card{
+  padding:20px 22px 22px 22px;
+  overflow:visible;
+  min-height:240px; /* raised to give enough vertical room */
+  position:relative;
+  border-radius:16px;
+}
+.thermo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.thermo-header h2{margin:0;font-size:18px}
+.vip{opacity:0.25;font-weight:700}
+
+/* two-column inner grid */
+.thermo-grid{display:grid;grid-template-columns: 1fr 1fr;gap:12px}
+
+/* stat panel */
+.stat-panel{background:rgba(255,255,255,0.01);padding:12px;border-radius:10px;min-height:200px;min-width:0;overflow:visible}
+.stat-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;min-height:28px}
+.k{flex: 1 1 50%; color:#b9cbe0; font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px}
+.v{flex: 0 0 28%; font-weight:700; color:#ffefdf; text-align:right; white-space:nowrap; min-width:56px}
+.unit{flex: 0 0 18%; color:var(--muted); font-size:12px; text-align:right; min-width:48px}
+
+/* thermo footer with mini wind */
+/* move mini wind into its own block to avoid text overlap */
+.thermo-footer{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-top:16px;
+  gap:18px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,0.04);
+}
+
+.wind-left{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+  min-width:0;
+}
+
+.wind-label{
+  color:#ffffff;
+  font-weight:700;
+  font-size:15px;
+  line-height:1.3;
+  letter-spacing:-0.3px;
+}
+
+.ef-label{
+  color:#b9cbe0;
+  font-size:12px;
+  font-weight:500;
+  opacity:0.85;
+}
+
+/* mini wind size and position */
+.miniwrap{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+  padding:12px;
+  background:rgba(255,255,255,0.01);
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.02);
+  min-width:240px;
+  flex-shrink:0;
+}
+
+.miniwrap-label{
+  font-size:10px;
+  color:var(--muted);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.4px;
+  opacity:0.7;
+}
+
+#miniWind{
+  width:100% !important;
+  height:auto !important;
+  display:block;
+  border-radius:6px;
+  background:rgba(0,0,0,0.2);
+}
+
+/* probability card and chart sizing */
+.prob-card{min-height:360px;padding:16px;overflow:hidden;border-radius:16px}
+.prob-card h3{margin:0 0 10px 0;font-size:16px}
+.chart-wrap{height:360px;min-height:240px;width:100%;overflow:hidden;position:relative;padding-right:90px}
+
+/* canvas safe rules */
+canvas{display:block;width:100% !important;height:auto !important;pointer-events:auto}
+
+/* responsive */
+@media (max-width:980px){
+  .layout-grid{grid-template-columns:1fr;gap:18px}
+  .left-col{width:100%}
+  .thermo-grid{grid-template-columns:1fr;row-gap:12px}
+  .chart-wrap{height:300px;padding-right:44px}
+  .mini-wind-wrapper{width:100%;align-items:flex-start;margin-left:0}
+}
+
+/* safety */
+.card * { max-width: 100%; box-sizing: border-box; }
+
+/* ensure canvas stays above and accepts pointer events */
+.prob-card, .chart-wrap { position: relative; }
+canvas { z-index: 1; pointer-events: auto; }
+
+/* export + chart spacing improvements */
+/* extra padding on chart area to make room for datalabels that render outside bars */
+.prob-card { padding-bottom: 18px; }
+.chart-wrap { position: relative; padding-right: 72px; } /* room for percent labels */
+.thermo-card { min-height: 220px; }
+
+/* improve text wrapping and line height in thermo card so export stays non-overlapping */
+.thermo-card .stat-row .k,
+.thermo-card .stat-row .v,
+.thermo-card .stat-row .unit {
+  line-height:1.1;
+  word-break:break-word;
+}
+
+/* stronger contrast for tiny text in export */
+.thermo-card .k { color: #b9cbe0; font-size:12px; font-weight:600; }
+.thermo-card .v { color: #ffefdf; font-size:13px; font-weight:800; }
+.thermo-card .unit { color: var(--muted); font-size:11px; }
+
+/* add gentle inner padding for export-safe spacing */
+.thermo-card .inner-padding {
+  padding-right: 260px; /* reserve space visually so mini wind does not overlap summary */
+}
+
+/* helpers used by export preview rendering */
+.export-legend { margin-top:10px; color: #b9cbe0; font-size:12px }
+
+/* accessibility */
+button:focus, input:focus { outline: 2px solid rgba(38,198,218,0.18); outline-offset: 2px }
+
+/* percentage column on the right side of the chart area */
+.percent-col {
+  position: absolute;
+  right: 8px;             /* slight adjustment for visual balance */
+  top: 0;                 /* start from top of chart container */
+  bottom: 0;
+  width: 80px;            /* slightly wider for breathing room */
+  pointer-events: none;   /* do not block canvas interactions */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 0;                 /* we'll position items absolutely for pixel precision */
+}
+
+/* each percentage item is absolutely positioned to match the bar center */
+.percent-item {
+  position: absolute;
+  right: 4px;             /* align to right edge with small margin */
+  white-space: nowrap;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;        /* slightly smaller for tighter fit */
+  pointer-events: none;
+  text-align: right;
+  transform: translateY(-50%);  /* center on the Y coordinate */
+  line-height: 1;
+}
+
+/* footer */
+.app-footer{
+  max-width:1200px;
+  margin:40px auto 20px;
+  padding:20px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+  opacity:0.65;
+}
+
+.app-footer p{
+  margin:0;
+  font-weight:500;
+  letter-spacing:0.2px;
+}

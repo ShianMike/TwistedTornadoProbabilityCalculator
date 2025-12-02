@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Twisted Weather Analyzer</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Twisted Weather Analyzer</h1>
+      <p class="subtitle">Enter parameters, then click Analyze to populate the Thermodynamics card</p>
+    </header>
+
+    <section class="layout-grid">
+      <aside class="left-col card glass">
+        <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
+          <h2>Inputs</h2>
+
+          <div class="grid-2">
+            <label>
+              <span class="label-title">Temperature (F)</span>
+              <input id="TEMP" type="number" step="0.1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">Dewpoint (F)</span>
+              <input id="DEWPOINT" type="number" step="0.1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">CAPE (J/kg)</span>
+              <input id="CAPE" type="number" step="1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">0-3km Lapse Rate (C/km)</span>
+              <input id="LAPSE_RATE_0_3" type="number" step="0.1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">Surface RH (%)</span>
+              <input id="SURFACE_RH" type="number" step="1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">PWAT (in)</span>
+              <input id="PWAT" type="number" step="0.01" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">SRH (m²/s²)</span>
+              <input id="SRH" type="number" step="1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">STP</span>
+              <input id="STP" type="number" step="0.1" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">VTP</span>
+              <input id="VTP" type="number" step="1" min="0" max="5" placeholder="">
+            </label>
+
+            <label>
+              <span class="label-title">Storm Speed (mph)</span>
+              <input id="STORM_SPEED" type="number" step="0.1" placeholder="">
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button id="analyze" type="button" class="btn primary">Analyze</button>
+            <button id="reset" type="reset" class="btn ghost">Reset</button>
+            <button id="exportBtn" type="button" class="btn outline">Export PNG</button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="right-col" aria-live="polite">
+        <div class="thermo-card card glass" role="region" aria-label="Thermodynamics summary">
+          <div class="thermo-header">
+            <h2>Thermodynamics</h2>
+            <div class="vip">VIP</div>
+          </div>
+
+          <div class="thermo-grid">
+            <div class="stat-panel">
+              <div class="stat-row"><span class="k">TEMPERATURE</span><span class="v" id="sum_TEMP">—</span><span class="unit">F</span></div>
+              <div class="stat-row"><span class="k">CAPE</span><span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span></div>
+              <div class="stat-row"><span class="k">0-3KM LAPSE</span><span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span></div>
+              <div class="stat-row"><span class="k">PWAT</span><span class="v" id="sum_PWAT">—</span><span class="unit">IN</span></div>
+              <div class="stat-row"><span class="k">SURFACE RH</span><span class="v" id="sum_RH">—</span><span class="unit">%</span></div>
+            </div>
+
+            <div class="stat-panel">
+              <div class="stat-row"><span class="k">DEWPOINT</span><span class="v" id="sum_DEW">—</span><span class="unit">F</span></div>
+              <div class="stat-row"><span class="k">3CAPE</span><span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span></div>
+              <div class="stat-row"><span class="k">3-6KM LAPSE</span><span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span></div>
+              <div class="stat-row"><span class="k">SRH</span><span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span></div>
+              <div class="stat-row"><span class="k">700-500MB RH</span><span class="v" id="sum_700RH">—</span><span class="unit">%</span></div>
+            </div>
+          </div>
+
+          <div class="thermo-footer">
+            <div class="wind-left">
+              <div class="wind-label" id="windLabel">No estimate yet</div>
+              <div class="ef-label">EF Scale Estimate</div>
+            </div>
+            <div class="miniwrap">
+              <span class="miniwrap-label">Wind Speed Range (mph)</span>
+              <canvas id="miniWind" width="300" height="48" aria-hidden="true"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="prob-card card glass" role="region" aria-label="Probability distribution">
+          <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
+          <div class="chart-wrap">
+            <canvas id="probChart"></canvas>
+            <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Created by: seanmike</p>
+  </footer>
+</body>
+</html>

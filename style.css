@@ -146,7 +146,7 @@ input::placeholder{color:rgba(255,255,255,0.12)}
   align-items:center;
   justify-content:space-between;
   gap:8px;
-  padding:8px 2px;
+  padding:7px 2px;  /* slightly reduce to fix alignment */
   min-height:30px;
   flex:0 0 auto;
 }
@@ -154,7 +154,7 @@ input::placeholder{color:rgba(255,255,255,0.12)}
 /* ensure first row in each panel has no extra top margin */
 .stat-row:first-child {
   margin-top:0;
-  padding-top:0;  /* remove extra top padding from first row */
+  padding-top:2px;  /* small top padding for alignment */
 }
 
 .k{flex: 1 1 50%; color:#b9cbe0; font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px}
@@ -406,6 +406,16 @@ button:focus, input:focus { outline: 2px solid rgba(38,198,218,0.18); outline-of
   margin:0;
   font-weight:500;
   letter-spacing:0.2px;
+}
+
+.app-footer .disclaimer-text {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-bottom: 12px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
 }
 
 #specialFactors {

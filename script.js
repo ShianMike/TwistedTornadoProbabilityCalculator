@@ -16,9 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     PWAT: get('sum_PWAT'),
     RH: get('sum_RH'),
     DEW: get('sum_DEW'),
-    SRH: get('sum_SRH'),
-    STP: get('sum_STP'),
-    VTP: get('sum_VTP')
+    SRH: get('sum_SRH')
   };
 
   // Tornado type descriptions
@@ -87,47 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
       out[k] = v;
     });
     
-    // Auto-calculate STP and VTP from other parameters
-    out.STP = calculateSTP(out);
-    out.VTP = calculateVTP(out);
-    
     return out;
-  }
-
-  // Calculate Significant Tornado Parameter (STP)
-  // Formula: (CAPE/1500) × (SRH/150) × (LAPSE_0_3/9)
-  // Assumes effective layer; simplified for game use
-  function calculateSTP(data) {
-    const capeTerm = Math.max(0, data.CAPE / 1500);
-    const srhTerm = Math.max(0, data.SRH / 150);
-    const lapseTerm = Math.max(0, data.LAPSE_RATE_0_3 / 9);
-    
-    // Add moisture/LCL term (simplified using dewpoint depression)
-    const tempSpread = Math.max(0, data.TEMP - data.DEWPOINT);
-    const lclTerm = tempSpread < 30 ? (30 - tempSpread) / 30 : 0;
-    
-    let stp = capeTerm * srhTerm * lapseTerm * (0.5 + lclTerm * 0.5);
-    
-    // Clamp to realistic range
-    return Math.max(0, Math.min(64, stp));
-  }
-
-  // Calculate Violent Tornado Parameter (VTP)
-  // Formula based on extreme parameter thresholds
-  function calculateVTP(data) {
-    // VTP emphasizes extreme values of key parameters
-    const capeTerm = data.CAPE >= 3000 ? Math.pow((data.CAPE - 3000) / 7000, 0.7) : 0;
-    const srhTerm = data.SRH >= 300 ? Math.pow((data.SRH - 300) / 700, 0.7) : 0;
-    const lapseTerm = data.LAPSE_RATE_0_3 >= 8 ? Math.pow((data.LAPSE_RATE_0_3 - 8) / 4, 0.8) : 0;
-    
-    // Moisture and 3CAPE contribution
-    const cape3Term = data.CAPE_3KM >= 200 ? (data.CAPE_3KM - 200) / 2800 : 0;
-    const moistTerm = (data.PWAT >= 1.0) && (data.SURFACE_RH >= 60) ? 0.3 : 0;
-    
-    let vtp = (capeTerm * 6 + srhTerm * 5 + lapseTerm * 3 + cape3Term * 1.5 + moistTerm * 0.5);
-    
-    // Clamp to realistic range
-    return Math.max(0, Math.min(16, vtp));
   }
 
   function validateInputs(data) {
@@ -173,27 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
       warnings.push('Very high CAPE with very low PWAT is meteorologically unlikely.');
     }
     
-    // Extreme VTP requires extreme other parameters
-    if (data.VTP > 12 && (data.CAPE < 2000 || data.SRH < 300)) {
-      warnings.push('VTP > 12 is extremely rare and requires very high CAPE and SRH.');
-    }
-    
-    // 100% RH everywhere is unrealistic
-    if (data.SURFACE_RH === 100 && data.RH_MID === 100) {
-      warnings.push('100% RH at all levels is unrealistic. Atmospheric profiles have moisture variability.');
-    }
-    
-    // Check for "all parameters set to 1" trolling
-    const onesCount = [
-      data.CAPE === 1,
-      data.SRH === 1,
-      data.LAPSE_RATE_0_3 === 1
-    ].filter(Boolean).length;
-    
-    if (onesCount >= 3) {
-      warnings.push('Multiple parameters set to 1. This appears to be invalid test data rather than realistic atmospheric conditions.');
-    }
-
     // Display warnings
     const warningDiv = document.getElementById('validationWarnings');
     if (warnings.length > 0 && warningDiv) {
@@ -213,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
     const recordMax = {
       TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
-      SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STP: 64, VTP: 16, STORM_SPEED: 120,
+      SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STORM_SPEED: 120,
       CAPE_3KM: 3000, LAPSE_3_6KM: 10, RH_MID: 100
     };
 
@@ -221,8 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const capeN    = clamp(data.CAPE / recordMax.CAPE);
     const srhN     = clamp(data.SRH / recordMax.SRH);
-    const stpN     = clamp(data.STP / recordMax.STP);
-    const vtpN     = clamp(data.VTP / recordMax.VTP);
     const lapseN   = clamp((data.LAPSE_RATE_0_3 - 1) / (recordMax.LAPSE_RATE_0_3 - 1));
     const pwatN    = clamp(data.PWAT / recordMax.PWAT);
     const rhN      = clamp(data.SURFACE_RH / recordMax.SURFACE_RH);
@@ -250,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (moistFactor > 0.35) scores.WEDGE += capeN * 10;
     if (mid_moist) scores.WEDGE += rhMidN * 6;
     else if (mid_dry) scores.WEDGE -= 4;
-    scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22 - vtpN * 18);
+    scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22);
     if (speedN > 0.65) scores.WEDGE = Math.max(1, scores.WEDGE - 8);
 
     // -------------------------
@@ -265,12 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
       scores.STOVEPIPE += lapseN * 20;  // reduced from 28; still matters but less dominant
     } else {
       scores.STOVEPIPE -= 12;  // increased penalty for weak lapse
-    }
-    // VTP is important but must be very high (requires threshold)
-    if (vtpN > 0.5) {
-      scores.STOVEPIPE += vtpN * 24;  // reduced from 36; only rewards high VTP
-    } else {
-      scores.STOVEPIPE -= 4;  // penalize moderate VTP
     }
     // CAPE must be present but not excessive (narrower range)
     if (capeN >= 0.3) scores.STOVEPIPE += capeN * 8;
@@ -293,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       scores.SIDEWINDER -= 6;
     }
-    scores.SIDEWINDER += vtpN * 18;
+    scores.SIDEWINDER += capeN * 12;  // Use CAPE instead of VTP
     if (speedN > 0.4) scores.SIDEWINDER += speedN * 8;
 
     if (is_dry) scores.DRILLBIT += 18;
@@ -320,14 +249,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k]); });
 
-    const stpMultiplier = 0.9 + (stpN * 0.6);
-    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * stpMultiplier); });
+    // Use combined CAPE and SRH for overall tornado favorability
+    const severityMultiplier = 0.9 + ((capeN + srhN) / 2 * 0.6);
+    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * severityMultiplier); });
 
     const total = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
     const percentages = Object.keys(scores).map(k => ({ Type: k, Prob: Math.round((scores[k] / total) * 1000) / 10 }));
     const types = percentages.sort((a,b) => b.Prob - a.Prob);
 
-    let multiVortexChance = Math.round(clamp(srhN * 0.6 + vtpN * 0.25 + capeN * 0.15, 0, 1) * 100);
+    let multiVortexChance = Math.round(clamp(srhN * 0.7 + capeN * 0.3, 0, 1) * 100);
     multiVortexChance = Math.max(1, Math.min(95, multiVortexChance));
 
     let rainwrappedChance = Math.round(clamp(pwatN * 0.68 + rhN * 0.32, 0, 1) * 100);
@@ -349,20 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function estimate_wind(data) {
     const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
-    const MAX = { CAPE: 10226, SRH: 1000, STP: 64, VTP: 16, LAPSE: 12, SPEED: 120 };
+    const MAX = { CAPE: 10226, SRH: 1000, LAPSE: 12, SPEED: 120 };
 
-    const vtpN = clamp((data.VTP || 0) / MAX.VTP);
-    const stpN = clamp((data.STP || 0) / MAX.STP);
     const capeN = clamp((data.CAPE || 0) / MAX.CAPE);
     const srhN = clamp((data.SRH || 0) / MAX.SRH);
     const lapseN = clamp(((data.LAPSE_RATE_0_3 || 1) - 1) / (MAX.LAPSE - 1));
     const speedN = clamp((data.STORM_SPEED || 0) / MAX.SPEED);
 
-    // Increased weights to produce stronger estimates, especially VTP and STP
-    const w = { vtp: 0.75, stp: 0.25, cape: 0.18, srh: 0.15, lapse: 0.08, speed: 0.05 };
+    // Rebalanced weights without VTP and STP
+    const w = { cape: 0.45, srh: 0.35, lapse: 0.12, speed: 0.08 };
 
     // Calculate raw severity (can exceed 1.0 for extreme cases)
-    let severity = vtpN * w.vtp + stpN * w.stp + capeN * w.cape + srhN * w.srh + lapseN * w.lapse + speedN * w.speed;
+    let severity = capeN * w.cape + srhN * w.srh + lapseN * w.lapse + speedN * w.speed;
     
     // Apply non-linear scaling: boost mid-to-high values more aggressively
     // This makes moderate parameters produce stronger winds
@@ -401,8 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sum.PWAT && (sum.PWAT.textContent = data.PWAT ? String(data.PWAT) : '—');
     sum.RH && (sum.RH.textContent = data.SURFACE_RH ? String(data.SURFACE_RH) : '—');
     sum.SRH && (sum.SRH.textContent = data.SRH ? String(data.SRH) : '—');
-    sum.STP && (sum.STP.textContent = data.STP ? String(data.STP) : '—');
-    sum.VTP && (sum.VTP.textContent = data.VTP ? String(data.VTP) : '—');
 
     const sum3CAPE = document.getElementById('sum_3CAPE');
     const sum36LAPSE = document.getElementById('sum_36LAPSE');
@@ -825,8 +751,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProbChart(result.types);
     renderSpecialFactors(result.factors);
     const estimate = estimate_wind(data);
-    drawMiniWind(data.VTP > 0 ? estimate : null);
-    if (data.VTP > 0) windLabel.textContent = estimate.label;
+    drawMiniWind(data.CAPE > 0 ? estimate : null);
+    if (data.CAPE > 0) windLabel.textContent = estimate.label;
     else windLabel.textContent = 'No estimate yet';
   }
 
@@ -942,9 +868,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         renderEmptyProb();
       }
-      const vtpVal = parseFloat(get('VTP').value) || 0;
-      const estimate = estimate_wind({VTP: vtpVal});
-      drawMiniWind((vtpVal>0)?estimate:null);
+      const currentData = readInputs();
+      const estimate = estimate_wind(currentData);
+      drawMiniWind(currentData.CAPE > 0 ? estimate : null);
     }, 150);
   });
 

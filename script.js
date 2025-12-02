@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const probCanvas = get('probChart');
   const miniCanvas = get('miniWind');
-  const windLabel = get('windLabel'); // efLabel intentionally removed
+  const windLabel = get('windLabel');
 
   const sum = {
     TEMP: get('sum_TEMP'),
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     VTP: get('sum_VTP')
   };
 
-  // Ensure percent column exists, create if not
   function ensurePercentColumn() {
     const wrap = probCanvas && probCanvas.parentElement;
     if (!wrap) return null;
@@ -30,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
       pc = document.createElement('div');
       pc.id = 'percentCol';
       pc.className = 'percent-col';
-      // basic styling fallback if CSS missing
       pc.style.position = 'absolute';
       pc.style.right = '12px';
       pc.style.top = '36px';
@@ -43,90 +41,229 @@ document.addEventListener('DOMContentLoaded', () => {
     return pc;
   }
 
-  const percentColEl = ensurePercentColumn();
+  ensurePercentColumn();
 
   function readInputs() {
     const out = {};
+    // define same limits as the form (defensive)
+    const limits = {
+      TEMP: {min:-50, max:140},
+      DEWPOINT: {min:-50, max:120},
+      CAPE: {min:0, max:10226},
+      LAPSE_RATE_0_3: {min:0, max:12},
+      SURFACE_RH: {min:0, max:100},
+      PWAT: {min:0, max:3.5},
+      SRH: {min:0, max:1000},
+      STP: {min:0, max:64},
+      VTP: {min:0, max:16},
+      STORM_SPEED: {min:0, max:200}
+    };
     ids.forEach(k => {
       const el = get(k);
-      // If STORM_SPEED is present as STORM_SPEED or STORM_SPEED mismatch, try common fallback id
       let v = el && el.value !== '' ? parseFloat(el.value) : 0;
       if (!isFinite(v)) v = 0;
+      // clamp to limits if available
+      if (limits[k]) {
+        v = Math.max(limits[k].min, Math.min(limits[k].max, v));
+      }
       out[k] = v;
     });
     return out;
   }
 
   function calculate_probabilities(data) {
-    const scores = {
-      'WEDGE': 5,
-      'STOVEPIPE': 10,
-      'DRILLBIT': 5,
-      'CONE': 20,
-      'ROPE': 5,
-      'SIDEWINDER': 0,
-      'MULTI-VORTEX': 5
-    };
+		// normalize/clamp helpers
+		const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
+		const recordMax = {
+			TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
+			SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STP: 64, VTP: 16, STORM_SPEED: 120
+		};
 
-    const temp_spread = data.TEMP - data.DEWPOINT;
+		// ensure numeric defaults
+		Object.keys(recordMax).forEach(k => { if (typeof data[k] !== 'number') data[k] = 0; });
 
-    const is_soupy = (temp_spread <= 5) && (data.SURFACE_RH >= 80);
-    const is_dry = (temp_spread >= 15) && (data.SURFACE_RH <= 60);
+		// normalized metrics [0..1]
+		const capeN    = clamp(data.CAPE / recordMax.CAPE);
+		const srhN     = clamp(data.SRH  / recordMax.SRH);
+		const stpN     = clamp(data.STP  / recordMax.STP);
+		const vtpN     = clamp(data.VTP  / recordMax.VTP);
+		const lapseN   = clamp((data.LAPSE_RATE_0_3 - 1) / (recordMax.LAPSE_RATE_0_3 - 1));
+		const pwatN    = clamp(data.PWAT / recordMax.PWAT);
+		const rhN      = clamp(data.SURFACE_RH / recordMax.SURFACE_RH);
+		const speedN   = clamp(data.STORM_SPEED / recordMax.STORM_SPEED);
 
-    const is_high_cape = (data.CAPE >= 5000);
-    const is_low_cape = (data.CAPE <= 2500);
+		// realistic flags
+		const temp_spread = data.TEMP - data.DEWPOINT;
+		const is_soupy = (temp_spread <= 4) && (data.SURFACE_RH >= 75);
+		const is_moist = (data.SURFACE_RH >= 65);
+		const is_dry = (temp_spread >= 12) && (data.SURFACE_RH <= 50);
 
-    const is_extreme_srh = (data.SRH >= 450);
-    const is_violent_lapse = (data.LAPSE_RATE_0_3 >= 9.5);
-    const is_wedge_lapse = (data.LAPSE_RATE_0_3 >= 7.5 && data.LAPSE_RATE_0_3 <= 9.0);
+		// base priors (small starting values so contributions dominate)
+		const scores = {
+			'WEDGE': 4,
+			'STOVEPIPE': 4,
+			'DRILLBIT': 3,
+			'CONE': 5,
+			'ROPE': 2,
+			'SIDEWINDER': 4
+		};
 
-    const is_fast = (data.STORM_SPEED > 60);
-    const is_hypersonic = (data.STORM_SPEED > 75);
+		// -------------------------
+		// WEDGE (wide, rain-fed)
+		// - Driven primarily by low-level moisture: PWAT + surface RH
+		// - Needs moderate CAPE to sustain a broad updraft
+		// - Penalized by strong low-level rotation (SRH), high VTP, and very fast translation
+		// -------------------------
+		const moistFactor = clamp(pwatN * 0.7 + rhN * 0.3);
+		scores.WEDGE += moistFactor * 55;           // moisture is primary driver
+		if (moistFactor > 0.35) scores.WEDGE += capeN * 10; // CAPE helps only when moist
+		scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22 - vtpN * 18);
+		if (speedN > 0.65) scores.WEDGE = Math.max(1, scores.WEDGE - 8);
 
-    if (is_soupy) scores['WEDGE'] += 50;
-    if (is_high_cape) scores['WEDGE'] += 20;
-    if (is_wedge_lapse) scores['WEDGE'] += 15;
-    if (is_hypersonic && !is_soupy) scores['WEDGE'] -= 10;
+		// -------------------------
+		// STOVEPIPE (very narrow, violent)
+		// - Favored by very steep low-level lapse rates and high VTP
+		// - Also benefits from CAPE (to supply updraft) and some SRH
+		// -------------------------
+		scores.STOVEPIPE += lapseN * 48;  // strong lapse -> concentrated updraft
+		// stronger VTP influence so changing VTP has clearer impact
+		scores.STOVEPIPE += vtpN * 52;    // violent parameter pushes toward stovepipe
+		scores.STOVEPIPE += capeN * 10;
+		scores.STOVEPIPE += srhN * 6;
 
-    if (is_dry) scores['DRILLBIT'] += 40;
-    if (is_violent_lapse) scores['DRILLBIT'] += 30;
-    if (is_fast) scores['DRILLBIT'] += 20;
-    if (is_hypersonic) scores['DRILLBIT'] += 15;
+		// -------------------------
+		// SIDEWINDER (rotational, often fast/long-track narrow tornado)
+		// - Dominated by SRH (low-level rotation)
+		// - Boosted by VTP and storm speed
+		// -------------------------
+		scores.SIDEWINDER += srhN * 60;
+		// VTP also supports sidewinder (violent parameter) — increase impact
+		scores.SIDEWINDER += vtpN * 36;
+		scores.SIDEWINDER += speedN * 12;
 
-    if (is_extreme_srh && is_violent_lapse) scores['SIDEWINDER'] += 40;
-    if (is_hypersonic) scores['SIDEWINDER'] += 40;
-    if (data.VTP >= 3) scores['SIDEWINDER'] += 20;
+		// -------------------------
+		// DRILLBIT (thin, often in dry, fast storms)
+		// - Favored by dry boundary layer, high lapse, and fast storm motion
+		// - Moderate CAPE helps support updraft intensity
+		// -------------------------
+		if (is_dry) scores.DRILLBIT += 30;
+		scores.DRILLBIT += lapseN * 14;
+		if (speedN > 0.55) scores.DRILLBIT += speedN * 28;
+		scores.DRILLBIT += capeN * 6;
 
-    if (data.LAPSE_RATE_0_3 > 8.5) scores['STOVEPIPE'] += 30;
-    if (is_high_cape && !is_soupy) scores['STOVEPIPE'] += 20;
+		// -------------------------
+		// CONE (classic, mid-range tornado)
+		// - Moderately favored by CAPE (buoyancy) and moderate SRH
+		// - PWAT helps keep it from being rain-wrapped (moderate positive)
+		// -------------------------
+		scores.CONE += capeN * 26;
+		scores.CONE += srhN * 8;
+		scores.CONE += pwatN * 6;
 
-    if (is_extreme_srh) scores['MULTI-VORTEX'] += 40;
-    if (data.SRH > 600) scores['MULTI-VORTEX'] += 50;
+		// -------------------------
+		// ROPE (weak, decaying funnels)
+		// - Favored in low-CAPE, weaker flow, or late-stage dissipation
+		// - Slow storm motion increases chance
+		// -------------------------
+		if (capeN <= 0.18) scores.ROPE += 24;
+		if (speedN <= 0.35) scores.ROPE += 10;
+		// small bonus from low PWAT (less likelihood of broad wedge)
+		if (pwatN < 0.25) scores.ROPE += 6;
 
-    if (is_low_cape && !is_hypersonic) scores['ROPE'] += 50;
+		// enforce minima
+		Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k]); });
 
-    const total_score = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
-    const percentages = {};
-    Object.keys(scores).forEach(key => {
-      percentages[key] = Math.round((scores[key] / total_score) * 1000) / 10; // one decimal
-    });
+		// modest STP multiplier (reflects overall favorable composite)
+		const stpMultiplier = 0.9 + (stpN * 0.6); // conservative scaling
+		Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * stpMultiplier); });
 
-    const arr = Object.entries(percentages)
-                   .map(([k,v]) => ({Type: k, Prob: v}))
-                   .filter(x => x.Prob > 0)
-                   .sort((a,b) => b.Prob - a.Prob);
+		// convert to percentages
+		const total = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
+		const percentages = Object.keys(scores).map(k => ({ Type: k, Prob: Math.round((scores[k] / total) * 1000) / 10 }));
 
-    return arr;
+		const types = percentages.sort((a,b) => b.Prob - a.Prob);
+
+		// Special factors (separate from morphology distribution)
+		let multiVortexChance = Math.round(clamp(srhN * 0.6 + vtpN * 0.25 + capeN * 0.15, 0, 1) * 100);
+		multiVortexChance = Math.max(1, Math.min(95, multiVortexChance));
+
+		let rainwrappedChance = Math.round(clamp(pwatN * 0.68 + rhN * 0.32, 0, 1) * 100);
+		rainwrappedChance = Math.max(1, Math.min(95, rainwrappedChance));
+
+		let longTrackChance = Math.round(clamp(capeN * 0.6 + speedN * 0.4 + srhN * 0.1, 0, 1) * 100);
+		longTrackChance = Math.max(1, Math.min(95, longTrackChance));
+
+		return {
+			types: types,
+			factors: [
+				{ name: 'Multivortex', chance: multiVortexChance },
+				{ name: 'Rainwrapped', chance: rainwrappedChance },
+				{ name: 'Long-track', chance: longTrackChance }
+			]
+		};
   }
 
   function estimate_wind(data) {
-    if (data.VTP >= 4) return {est_min:290, est_max:320, label:'EF5 (THEORETICAL MAX)'};
-    if (data.VTP === 3) return {est_min:260, est_max:310, label:'EF5 (CATASTROPHIC)'};
-    if (data.VTP === 2) return {est_min:190, est_max:230, label:'EF4 (VIOLENT)'};
-    return {est_min:130, est_max:160, label:'EF2/EF3 (STRONG)'};
-  }
+	  // Composite severity-based wind estimator (uses more than VTP)
+	  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+
+	  // reasonable normalization maxima (same as used elsewhere)
+	  const MAX = { CAPE: 10226, SRH: 1000, STP: 64, VTP: 16, LAPSE: 12, SPEED: 120 };
+
+	  const vtpN = clamp((data.VTP || 0) / MAX.VTP);
+	  const stpN = clamp((data.STP || 0) / MAX.STP);
+	  const capeN = clamp((data.CAPE || 0) / MAX.CAPE);
+	  const srhN = clamp((data.SRH || 0) / MAX.SRH);
+	  const lapseN = clamp(((data.LAPSE_RATE_0_3 || 1) - 1) / (MAX.LAPSE - 1));
+	  const speedN = clamp((data.STORM_SPEED || 0) / MAX.SPEED);
+
+	  // Tunable weights (increase VTP influence so VTP changes are more decisive)
+	  const w = { vtp: 0.60, stp: 0.15, cape: 0.12, srh: 0.08, lapse: 0.03, speed: 0.02 };
+
+	  const severity = clamp(
+	    vtpN * w.vtp +
+	    stpN * w.stp +
+	    capeN * w.cape +
+	    srhN * w.srh +
+	    lapseN * w.lapse +
+	    speedN * w.speed,
+	    0, 1
+	  );
+
+	  // Map severity [0..1] to a continuous wind estimate.
+	  // Base range chosen to cover EF0-ish up to EF5 record.
+	  const MIN_BASE = 60;   // lower-bound base for weakest events
+	  const MAX_BASE = 333;  // record upper bound
+	  // central estimate scales with severity
+	  const center = Math.round(MIN_BASE + severity * (MAX_BASE - MIN_BASE));
+	  // uncertainty window: narrower for low severity, wider for high severity
+	  const spread = Math.round(20 + severity * 100);
+
+	  const est_min = Math.max(20, center - Math.round(spread * 0.6));
+	  const est_max = Math.min(MAX_BASE, center + Math.round(spread * 0.6));
+
+	  // Label by EF-style thresholds (approximate)
+	  let label = 'EF0-1';
+	  const mid = (est_min + est_max) / 2;
+	  if (mid >= 200) label = 'EF4/EF5';
+	  else if (mid >= 165) label = 'EF4';
+	  else if (mid >= 135) label = 'EF3';
+	  else if (mid >= 111) label = 'EF2';
+	  else if (mid >= 65) label = 'EF1';
+	  else label = 'EF0 (landspout)';
+
+	  return { est_min, est_max, label };
+}
 
   function populateSummary(data) {
+    // Show 3CAPE and 3-6KM LAPSE as scaled values (for display only)
+    // 3CAPE: 60% of CAPE, rounded, clamped to [1, 200]
+    let threeCAPE = Math.round(data.CAPE * 0.6);
+    threeCAPE = Math.max(1, Math.min(200, threeCAPE));
+
+    const threeSixLapse = Math.round(data.LAPSE_RATE_0_3 * 0.8 * 10) / 10;
+    const sevenHundredRH = Math.round(data.SURFACE_RH * 0.7);
+
     sum.TEMP && (sum.TEMP.textContent = data.TEMP ? String(data.TEMP) : '—');
     sum.DEW && (sum.DEW.textContent = data.DEWPOINT ? String(data.DEWPOINT) : '—');
     sum.CAPE && (sum.CAPE.textContent = data.CAPE ? String(data.CAPE) : '—');
@@ -136,6 +273,14 @@ document.addEventListener('DOMContentLoaded', () => {
     sum.SRH && (sum.SRH.textContent = data.SRH ? String(data.SRH) : '—');
     sum.STP && (sum.STP.textContent = data.STP ? String(data.STP) : '—');
     sum.VTP && (sum.VTP.textContent = data.VTP ? String(data.VTP) : '—');
+
+    // These IDs must exist in your HTML for the extra fields
+    const sum3CAPE = document.getElementById('sum_3CAPE');
+    const sum36LAPSE = document.getElementById('sum_36LAPSE');
+    const sum700RH = document.getElementById('sum_700RH');
+    if (sum3CAPE) sum3CAPE.textContent = threeCAPE ? String(threeCAPE) : '—';
+    if (sum36LAPSE) sum36LAPSE.textContent = threeSixLapse ? String(threeSixLapse) : '—';
+    if (sum700RH) sum700RH.textContent = sevenHundredRH ? String(sevenHundredRH) : '—';
   }
 
   let probChart = null;
@@ -172,6 +317,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return '#ffffff';
   }
 
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (w < 2*r) r = w/2;
+    if (h < 2*r) r = h/2;
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
   function drawMiniWind(estimate) {
     if (!miniCanvas) return;
     const ctx = miniCanvas.getContext('2d');
@@ -185,11 +344,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.save();
     ctx.scale(DPR, DPR);
 
+    // Fill the entire bar with color ranges, no gaps at ends
+    // EF0/landspout: white, EF1: green, EF2: yellow, EF3: orange, EF4: red, EF5+: pink
     const ranges = [
-      {start:65,end:110,color:'#4caf50'},
-      {start:111,end:165,color:'#ffb300'},
-      {start:166,end:199,color:'#ff7043'},
-      {start:200,end:320,color:'#e53935'}
+      {start: 0, end: 65, color: '#ffffff'},      // Landspout/EF0
+      {start: 65, end: 110, color: '#4caf50'},    // EF1 (green)
+      {start: 110, end: 135, color: '#ffeb3b'},   // EF2 (yellow)
+      {start: 135, end: 165, color: '#ff9800'},   // EF3 (orange)
+      {start: 165, end: 200, color: '#e53935'},   // EF4 (red)
+      {start: 200, end: 350, color: '#ec407a'}    // EF5+ (pink)
     ];
     const minX = 0, maxX = 350;
     const pad = 6;
@@ -243,18 +406,69 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.restore();
   }
 
-  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-    if (w < 2*r) r = w/2;
-    if (h < 2*r) r = h/2;
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
+  const drawPercentPlugin = {
+    id: 'drawPercentPlugin',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((dataset, datasetIndex) => {
+        const meta = chart.getDatasetMeta(datasetIndex);
+        meta.data.forEach((bar, index) => {
+          const value = dataset.data[index];
+          if (value == null) return;
+
+          const barX = (bar.x !== undefined) ? bar.x : (bar.getProps ? bar.getProps(['x'], true).x : 0);
+          const barY = (bar.y !== undefined) ? bar.y : (bar.getProps ? bar.getProps(['y'], true).y : 0);
+
+          const isHorizontal = chart.config.options.indexAxis === 'y';
+          const labelX = isHorizontal ? barX + 10 : barX;
+          const labelY = isHorizontal ? barY : barY - 8;
+
+          ctx.save();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '700 14px Inter, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(value) + '%', labelX, labelY);
+          ctx.restore();
+        });
+      });
+    }
+  };
+
+  function clearPercentColumn() {
+    const pc = ensurePercentColumn();
+    if (!pc) return;
+    pc.innerHTML = '';
+  }
+
+  function updatePercentColumn(values, labels) {
+    const pc = ensurePercentColumn();
+    if (!pc || !probChart) return;
+
+    pc.innerHTML = '';
+
+    const meta = probChart.getDatasetMeta(0);
+    if (!meta || !meta.data || !meta.data.length) return;
+
+    meta.data.forEach((bar, idx) => {
+      const value = values[idx];
+      if (value == null) return;
+
+      const item = document.createElement('div');
+      item.className = 'percent-item';
+      
+      const n = Math.round(value * 10) / 10;
+      item.textContent = (Number.isInteger(n) ? n : n.toFixed(1)) + '%';
+      
+      pc.appendChild(item);
+
+      let barCenterY = bar.y !== undefined ? bar.y : (bar.height !== undefined ? bar.y + bar.height / 2 : 0);
+
+      const canvasHeight = probCanvas.height || 300;
+      const percentY = (barCenterY / canvasHeight) * 100;
+
+      item.style.top = `${percentY}%`;
+    });
   }
 
   function renderEmptyProb() {
@@ -306,90 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
     probCanvas.style.pointerEvents = 'auto';
   }
 
-  // Fallback plugin to draw percentage text if ChartDataLabels fails or missing
-  const drawPercentPlugin = {
-    id: 'drawPercentPlugin',
-    afterDatasetsDraw(chart) {
-      const ctx = chart.ctx;
-      chart.data.datasets.forEach((dataset, datasetIndex) => {
-        const meta = chart.getDatasetMeta(datasetIndex);
-        meta.data.forEach((bar, index) => {
-          const value = dataset.data[index];
-          if (value == null) return;
-
-          // Chart.js v4 exposes .x and .y on elements. fallback to getProps if not present.
-          const barX = (bar.x !== undefined) ? bar.x : (bar.getProps ? bar.getProps(['x'], true).x : 0);
-          const barY = (bar.y !== undefined) ? bar.y : (bar.getProps ? bar.getProps(['y'], true).y : 0);
-
-          const isHorizontal = chart.config.options.indexAxis === 'y';
-          const labelX = isHorizontal ? barX + 10 : barX;
-          const labelY = isHorizontal ? barY : barY - 8;
-
-          ctx.save();
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '700 14px Inter, sans-serif';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(String(value) + '%', labelX, labelY);
-          ctx.restore();
-        });
-      });
-    }
-  };
-
-  function clearPercentColumn() {
-    const pc = ensurePercentColumn();
-    if (!pc) return;
-    pc.innerHTML = '';
-  }
-
-  function updatePercentColumn(values, labels) {
-    const pc = ensurePercentColumn();
-    if (!pc || !probChart) return;
-
-    pc.innerHTML = ''; // clear existing items
-
-    const meta = probChart.getDatasetMeta(0);
-    if (!meta || !meta.data || !meta.data.length) return;
-
-    const chartBox = probCanvas.getBoundingClientRect();
-    const canvasContainer = probCanvas.parentElement;
-    if (!canvasContainer) return;
-
-    meta.data.forEach((bar, idx) => {
-      const value = values[idx];
-      if (value == null) return;
-
-      const item = document.createElement('div');
-      item.className = 'percent-item';
-      
-      // format value: show one decimal if fractional, otherwise integer
-      const n = Math.round(value * 10) / 10;
-      item.textContent = (Number.isInteger(n) ? n : n.toFixed(1)) + '%';
-      
-      pc.appendChild(item);
-
-      // Calculate bar center position in canvas pixel coordinates
-      // For horizontal bars (indexAxis: 'y'), the bar's Y position is what we need
-      let barCenterY = 0;
-      
-      if (bar.y !== undefined) {
-        // Chart.js v4: bar.y is the center Y coordinate in canvas pixels
-        barCenterY = bar.y;
-      } else if (bar.height !== undefined && bar.y !== undefined) {
-        // Fallback: calculate from top + half height
-        barCenterY = bar.y + bar.height / 2;
-      }
-
-      // Convert canvas pixel Y to percentage of container height
-      const canvasHeight = probCanvas.height || 300;
-      const percentY = (barCenterY / canvasHeight) * 100;
-
-      // Apply positioning relative to percent-col container
-      item.style.top = `${percentY}%`;
-    });
-  }
-
   function renderProbChart(dataArr) {
     tryRegisterDataLabels();
 
@@ -419,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Could not register ChartDataLabels plugin, using fallback', e);
       }
     }
-    plugins.push(drawPercentPlugin); // always include fallback for robustness
+    plugins.push(drawPercentPlugin);
 
     if (probChart) {
       probChart.options.scales.x.max = safeMax;
@@ -427,7 +557,6 @@ document.addEventListener('DOMContentLoaded', () => {
       probChart.data.datasets[0].data = values;
       probChart.data.datasets[0].backgroundColor = bgColors;
       probChart.update('none');
-      // sync DOM percent column on next frame
       requestAnimationFrame(() => updatePercentColumn(values, labels));
       probCanvas.style.pointerEvents = 'auto';
       return;
@@ -480,60 +609,97 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     probChart = new Chart(ctx, chartOptions);
-
-    // Wait a frame for chart elements to be measured, then place DOM labels
     requestAnimationFrame(() => updatePercentColumn(values, labels));
-
     probCanvas.style.pointerEvents = 'auto';
   }
 
-  // analyze handler
-  analyzeBtn.addEventListener('click', () => {
+  // Auto-analysis with debounce
+  let autoAnalysisTimer = null;
+  const AUTO_ANALYSIS_DELAY = 500;
+
+  function triggerAutoAnalysis() {
+    clearTimeout(autoAnalysisTimer);
+    autoAnalysisTimer = setTimeout(() => {
+      performAnalysis();
+    }, AUTO_ANALYSIS_DELAY);
+  }
+
+  function performAnalysis() {
     const data = readInputs();
     populateSummary(data);
-
-    const probs = calculate_probabilities(data);
-    renderProbChart(probs);
-
+    const result = calculate_probabilities(data);
+    renderProbChart(result.types);
+    renderSpecialFactors(result.factors);
     const estimate = estimate_wind(data);
     drawMiniWind(data.VTP > 0 ? estimate : null);
-
     if (data.VTP > 0) windLabel.textContent = estimate.label;
     else windLabel.textContent = 'No estimate yet';
-  });
+  }
 
-  // reset handler
-  resetBtn.addEventListener('click', () => {
-    ids.forEach(k => {
-      const el = get(k);
-      if (el) el.value = '';
-    });
+  // --- NEW: Render special factors below the chart ---
+  // Reference the specialFactors container inside thermo-card
+  const thermoCard = document.querySelector('.thermo-card');
+  const specialFactorsContainer = thermoCard.querySelector('#specialFactors');
 
-    Object.values(sum).forEach(el => {
-      if (el) el.textContent = '—';
-    });
+  function renderSpecialFactors(factors) {
+    if (!specialFactorsContainer) return;
+    specialFactorsContainer.innerHTML = '<strong>Special Tornado Factors:</strong><br>' +
+      factors.map(f => `${f.name}: <span style="color:#fff;font-weight:700">${f.chance}%</span>`).join('<br>');
+  }
 
-    renderEmptyProb();
-    drawMiniWind(null);
-    windLabel.textContent = 'No estimate yet';
-  });
-
-  // export handler
-  exportBtn.addEventListener('click', async () => {
-    try {
-      if (typeof html2canvas === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        script.onload = () => exportToImage();
-        document.head.appendChild(script);
-      } else {
-        await exportToImage();
-      }
-    } catch (err) {
-      console.error('Export failed:', err);
-      alert('Export failed. Please try again.');
+  // Auto-analyze on input changes
+  ids.forEach(id => {
+    const el = get(id);
+    if (el) {
+      el.addEventListener('input', performAnalysis);
+      el.addEventListener('change', performAnalysis);
     }
   });
+
+  // Analyze button handler
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      performAnalysis();
+    });
+  }
+
+  // Reset button handler
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      ids.forEach(k => {
+        const el = get(k);
+        if (el) el.value = '';
+      });
+      Object.values(sum).forEach(el => {
+        if (el) el.textContent = '—';
+      });
+      renderEmptyProb();
+      drawMiniWind(null);
+      windLabel.textContent = 'No estimate yet';
+      // Clear special factors
+      if (specialFactorsContainer) specialFactorsContainer.innerHTML = '';
+    });
+  }
+
+  // Export handler
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      try {
+        if (typeof html2canvas === 'undefined') {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          script.onload = () => exportToImage();
+          document.head.appendChild(script);
+        } else {
+          await exportToImage();
+        }
+      } catch (err) {
+        console.error('Export failed:', err);
+        alert('Export failed. Please try again.');
+      }
+    });
+  }
 
   async function exportToImage() {
     const rightCol = document.querySelector('.right-col');
@@ -564,12 +730,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // initial render
+  // Initial render
   renderEmptyProb();
   drawMiniWind(null);
   if (windLabel) windLabel.textContent = 'No estimate yet';
 
-  // responsive redraw with synced percent column
+  // Responsive redraw
   let resizeTimer = null;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -585,4 +751,52 @@ document.addEventListener('DOMContentLoaded', () => {
       drawMiniWind((vtpVal>0)?estimate:null);
     }, 150);
   });
+
+  console.log('Twisted Weather Analyzer initialized');
+
+  // Tooltip for thermodynamics labels
+  (function setupThermoTooltips(){
+    const tooltip = document.getElementById('statTooltip');
+    if (!tooltip) return;
+    const labels = document.querySelectorAll('.thermo-card .k[data-desc]');
+    function showTip(e){
+      const el = e.currentTarget;
+      const desc = el.getAttribute('data-desc') || '';
+      tooltip.textContent = desc;
+      tooltip.classList.add('visible');
+      tooltip.setAttribute('aria-hidden','false');
+      positionTip(e);
+    }
+    function positionTip(e){
+      const rect = (e.currentTarget) ? e.currentTarget.getBoundingClientRect() : (e);
+      const cardRect = document.querySelector('.thermo-card').getBoundingClientRect();
+      // calculate position relative to thermo-card
+      const left = Math.min(cardRect.width - 280, Math.max(8, (rect.left - cardRect.left) + 8));
+      const top = (rect.top - cardRect.top) + rect.height + 6;
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
+    function moveTip(e){
+      // If triggered by mousemove, position near pointer
+      const cardRect = document.querySelector('.thermo-card').getBoundingClientRect();
+      const left = Math.min(cardRect.width - 280, Math.max(8, e.clientX - cardRect.left + 8));
+      const top = Math.min(cardRect.height - 40, e.clientY - cardRect.top + 12);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
+    function hideTip(){
+      tooltip.classList.remove('visible');
+      tooltip.setAttribute('aria-hidden','true');
+    }
+    labels.forEach(lbl => {
+      lbl.addEventListener('mouseenter', showTip);
+      lbl.addEventListener('mousemove', moveTip);
+      lbl.addEventListener('mouseleave', hideTip);
+      lbl.addEventListener('focus', showTip);
+      lbl.addEventListener('blur', hideTip);
+    });
+    // hide on scroll or resize to avoid stuck tooltip
+    window.addEventListener('scroll', hideTip, true);
+    window.addEventListener('resize', hideTip);
+  })();
 });

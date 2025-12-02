@@ -17,7 +17,7 @@
   <main class="app">
     <header class="app-header">
       <h1>Twisted Weather Analyzer</h1>
-      <p class="subtitle">Enter parameters, then click Analyze to populate the Thermodynamics card</p>
+      <p class="subtitle">Enter parameters and analyze tornado morphology probability</p>
     </header>
 
     <section class="layout-grid">
@@ -28,52 +28,54 @@
           <div class="grid-2">
             <label>
               <span class="label-title">Temperature (F)</span>
-              <input id="TEMP" type="number" step="0.1" placeholder="">
+              <input id="TEMP" type="number" step="0.1" min="-50" max="140" placeholder="">
             </label>
 
             <label>
               <span class="label-title">Dewpoint (F)</span>
-              <input id="DEWPOINT" type="number" step="0.1" placeholder="">
+              <input id="DEWPOINT" type="number" step="0.1" min="-50" max="120" placeholder="">
             </label>
 
             <label>
               <span class="label-title">CAPE (J/kg)</span>
-              <input id="CAPE" type="number" step="1" placeholder="">
+              <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
             </label>
 
             <label>
               <span class="label-title">0-3km Lapse Rate (C/km)</span>
-              <input id="LAPSE_RATE_0_3" type="number" step="0.1" placeholder="">
+              <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
             </label>
 
             <label>
               <span class="label-title">Surface RH (%)</span>
-              <input id="SURFACE_RH" type="number" step="1" placeholder="">
+              <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
             </label>
 
             <label>
               <span class="label-title">PWAT (in)</span>
-              <input id="PWAT" type="number" step="0.01" placeholder="">
+              <input id="PWAT" type="number" step="0.01" min="0" max="3.5" placeholder="">
             </label>
 
             <label>
               <span class="label-title">SRH (m²/s²)</span>
-              <input id="SRH" type="number" step="1" placeholder="">
+              <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
             </label>
 
+            <!-- STP moved to left column -->
             <label>
               <span class="label-title">STP</span>
-              <input id="STP" type="number" step="0.1" placeholder="">
+              <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
             </label>
 
+            <!-- VTP moved to right column -->
             <label>
               <span class="label-title">VTP</span>
-              <input id="VTP" type="number" step="1" min="0" max="5" placeholder="">
+              <input id="VTP" type="number" step="1" min="0" max="16" placeholder="">
             </label>
 
             <label>
               <span class="label-title">Storm Speed (mph)</span>
-              <input id="STORM_SPEED" type="number" step="0.1" placeholder="">
+              <input id="STORM_SPEED" type="number" step="0.1" min="0" max="200" placeholder="">
             </label>
           </div>
 
@@ -94,19 +96,57 @@
 
           <div class="thermo-grid">
             <div class="stat-panel">
-              <div class="stat-row"><span class="k">TEMPERATURE</span><span class="v" id="sum_TEMP">—</span><span class="unit">F</span></div>
-              <div class="stat-row"><span class="k">CAPE</span><span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span></div>
-              <div class="stat-row"><span class="k">0-3KM LAPSE</span><span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span></div>
-              <div class="stat-row"><span class="k">PWAT</span><span class="v" id="sum_PWAT">—</span><span class="unit">IN</span></div>
-              <div class="stat-row"><span class="k">SURFACE RH</span><span class="v" id="sum_RH">—</span><span class="unit">%</span></div>
+              <div class="stat-row">
+                <span class="k" data-desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
+                <span class="v" id="sum_TEMP">—</span><span class="unit">F</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="CAPE (Convective Available Potential Energy) is the measure of potential energy for thunderstorms to develop. Higher CAPE indicates stronger instability and higher potential for strong storms and tornadoes.">CAPE</span>
+                <span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="0-3KM Lapse Rate: Temperature change per kilometer from the surface to 3 km. A steeper (larger) lapse rate indicates stronger low-level instability and contributes to tornado intensity and storm growth. Values up to ~10 C/km are possible on high-risk days.">0-3KM LAPSE</span>
+                <span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="PWAT (Precipitable Water) is the total water vapor in a column of air. Higher PWAT increases potential for heavy rainfall, reduced visibility, larger hail, and rain-wrapped tornadoes. PWAT < 0.9 in usually lowers rainwrap chance; PWAT > 0.9 in increases it.">PWAT</span>
+                <span class="v" id="sum_PWAT">—</span><span class="unit">IN</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="Surface Relative Humidity (RH) shows the moisture content near the ground. Higher surface RH supports storm development and intensification by keeping the boundary layer moist.">SURFACE RH</span>
+                <span class="v" id="sum_RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="STP (Significant Tornado Parameter) is a composite index indicating environment favorable for strong/long-track tornadoes. Higher STP increases the chance for EF2+ events.">STP</span>
+                <span class="v" id="sum_STP">—</span><span class="unit">—</span>
+              </div>
             </div>
 
             <div class="stat-panel">
-              <div class="stat-row"><span class="k">DEWPOINT</span><span class="v" id="sum_DEW">—</span><span class="unit">F</span></div>
-              <div class="stat-row"><span class="k">3CAPE</span><span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span></div>
-              <div class="stat-row"><span class="k">3-6KM LAPSE</span><span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span></div>
-              <div class="stat-row"><span class="k">SRH</span><span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span></div>
-              <div class="stat-row"><span class="k">700-500MB RH</span><span class="v" id="sum_700RH">—</span><span class="unit">%</span></div>
+              <div class="stat-row">
+                <span class="k" data-desc="Dew Point indicates the temperature at which air becomes saturated and water condenses. Higher dew points are crucial for storm development because they indicate available low-level moisture.">DEWPOINT</span>
+                <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="3CAPE (scaled) shows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE (scaled)</span>
+                <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE (scaled)</span>
+                <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="SRH (Storm-Relative Helicity) measures how much the air within a storm is spinning relative to storm motion. High SRH is a major contributor to strong tornado potential because it reflects stronger low-level rotation.">SRH</span>
+                <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="700–500 mb RH (scaled) shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH (scaled)</span>
+                <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+                <span class="k" data-desc="VTP (Violent Tornado Parameter) highlights environments supportive of EF4+ tornadoes. Larger VTP suggests higher potential for violent tornadoes.">VTP</span>
+                <span class="v" id="sum_VTP">—</span><span class="unit">—</span>
+              </div>
             </div>
           </div>
 
@@ -120,6 +160,12 @@
               <canvas id="miniWind" width="300" height="48" aria-hidden="true"></canvas>
             </div>
           </div>
+
+          <!-- Special factors will be rendered here, below the EF scale -->
+          <div id="specialFactors"></div>
+
+          <!-- tooltip for thermo stat descriptions -->
+          <div id="statTooltip" class="stat-tooltip" role="tooltip" aria-hidden="true"></div>
         </div>
 
         <div class="prob-card card glass" role="region" aria-label="Probability distribution">
@@ -134,6 +180,9 @@
   </main>
 
   <footer class="app-footer">
+    <p style="font-size: 11px; opacity: 0.6; margin-bottom: 12px; max-width: 600px; margin-left: auto; margin-right: auto;">
+      <strong>Disclaimer:</strong> This is a game/simulation tool for the Twisted weather simulation game. Tornado morphology predictions and wind speed estimates are based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction. For actual tornado threats and safety information, always consult the National Weather Service and official emergency alerts.
+    </p>
     <p>Created by: seanmike</p>
   </footer>
 </body>

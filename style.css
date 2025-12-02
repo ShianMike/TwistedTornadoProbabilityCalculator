@@ -94,6 +94,12 @@ input::placeholder{color:rgba(255,255,255,0.12)}
 .v{flex: 0 0 28%; font-weight:700; color:#ffefdf; text-align:right; white-space:nowrap; min-width:56px}
 .unit{flex: 0 0 18%; color:var(--muted); font-size:12px; text-align:right; min-width:48px}
 
+/* Add a subtle italic for scaled/statistical fields */
+.stat-row .k:contains('(scaled)') {
+  font-style: italic;
+  opacity: 0.85;
+}
+
 /* thermo footer with mini wind */
 /* move mini wind into its own block to avoid text overlap */
 .thermo-footer{
@@ -244,6 +250,44 @@ button:focus, input:focus { outline: 2px solid rgba(38,198,218,0.18); outline-of
   line-height: 1;
 }
 
+/* tooltip styles */
+.stat-tooltip {
+  position: absolute;
+  z-index: 9999;
+  max-width: 260px;
+  background: rgba(12,18,24,0.96);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  pointer-events: none;
+  transform-origin: top left;
+  opacity: 0;
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: normal;
+}
+
+/* small arrow */
+.stat-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: rgba(12,18,24,0.96);
+  transform: rotate(45deg);
+  left: 12px;
+  top: -5px;
+  box-shadow: -2px -2px 6px rgba(0,0,0,0.25);
+}
+
+/* visible state */
+.stat-tooltip.visible { opacity: 1; transform: translateY(6px); }
+
+/* ensure tooltip doesn't clip inside thermo-card */
+.thermo-card { position: relative; }
+
 /* footer */
 .app-footer{
   max-width:1200px;
@@ -259,4 +303,16 @@ button:focus, input:focus { outline: 2px solid rgba(38,198,218,0.18); outline-of
   margin:0;
   font-weight:500;
   letter-spacing:0.2px;
+}
+
+#specialFactors {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #b9cbe0;
+  line-height: 1.6;
+}
+#specialFactors strong {
+  color: #26c6da;
+  font-weight: 700;
+  font-size: 13px;
 }

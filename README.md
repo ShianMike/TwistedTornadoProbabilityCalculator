@@ -1,5 +1,4 @@
-# Twisted Tornado Probability Calculator
-Twisted Weather Analyzer estimates tornado morphology probabilities and theoretical wind speeds using inputs like CAPE, lapse rates, SRH, RH, temperature, dewpoint, PWAT, and storm speed. It provides a thermodynamic summary, EF-scale wind estimate, probability chart, and PNG export.
+Try It
 https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
 
 # Play Twisted

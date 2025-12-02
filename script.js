@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const ids = ['TEMP','DEWPOINT','CAPE','LAPSE_RATE_0_3','SURFACE_RH','PWAT','SRH','STP','VTP','STORM_SPEED'];
+  const ids = ['TEMP','DEWPOINT','CAPE','LAPSE_RATE_0_3','SURFACE_RH','PWAT','SRH','STORM_SPEED'];
   const get = id => document.getElementById(id);
   const analyzeBtn = get('analyze');
   const resetBtn = get('reset');
@@ -71,8 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
       SURFACE_RH: {min:0, max:100},
       PWAT: {min:0, max:3.5},
       SRH: {min:0, max:1000},
-      STP: {min:0, max:64},
-      VTP: {min:0, max:16},
       STORM_SPEED: {min:0, max:200},
       CAPE_3KM: {min:0, max:3000},
       LAPSE_3_6KM: {min:0, max:10},
@@ -88,10 +86,130 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       out[k] = v;
     });
+    
+    // Auto-calculate STP and VTP from other parameters
+    out.STP = calculateSTP(out);
+    out.VTP = calculateVTP(out);
+    
     return out;
   }
 
+  // Calculate Significant Tornado Parameter (STP)
+  // Formula: (CAPE/1500) × (SRH/150) × (LAPSE_0_3/9)
+  // Assumes effective layer; simplified for game use
+  function calculateSTP(data) {
+    const capeTerm = Math.max(0, data.CAPE / 1500);
+    const srhTerm = Math.max(0, data.SRH / 150);
+    const lapseTerm = Math.max(0, data.LAPSE_RATE_0_3 / 9);
+    
+    // Add moisture/LCL term (simplified using dewpoint depression)
+    const tempSpread = Math.max(0, data.TEMP - data.DEWPOINT);
+    const lclTerm = tempSpread < 30 ? (30 - tempSpread) / 30 : 0;
+    
+    let stp = capeTerm * srhTerm * lapseTerm * (0.5 + lclTerm * 0.5);
+    
+    // Clamp to realistic range
+    return Math.max(0, Math.min(64, stp));
+  }
+
+  // Calculate Violent Tornado Parameter (VTP)
+  // Formula based on extreme parameter thresholds
+  function calculateVTP(data) {
+    // VTP emphasizes extreme values of key parameters
+    const capeTerm = data.CAPE >= 3000 ? Math.pow((data.CAPE - 3000) / 7000, 0.7) : 0;
+    const srhTerm = data.SRH >= 300 ? Math.pow((data.SRH - 300) / 700, 0.7) : 0;
+    const lapseTerm = data.LAPSE_RATE_0_3 >= 8 ? Math.pow((data.LAPSE_RATE_0_3 - 8) / 4, 0.8) : 0;
+    
+    // Moisture and 3CAPE contribution
+    const cape3Term = data.CAPE_3KM >= 200 ? (data.CAPE_3KM - 200) / 2800 : 0;
+    const moistTerm = (data.PWAT >= 1.0) && (data.SURFACE_RH >= 60) ? 0.3 : 0;
+    
+    let vtp = (capeTerm * 6 + srhTerm * 5 + lapseTerm * 3 + cape3Term * 1.5 + moistTerm * 0.5);
+    
+    // Clamp to realistic range
+    return Math.max(0, Math.min(16, vtp));
+  }
+
+  function validateInputs(data) {
+    const warnings = [];
+    
+    // Check for maxed-out "perfect storm" trolling
+    const maxedCount = [
+      data.CAPE >= 10000,
+      data.SRH >= 900,
+      data.LAPSE_RATE_0_3 >= 11,
+      data.PWAT >= 3.3
+    ].filter(Boolean).length;
+    
+    if (maxedCount >= 3) {
+      warnings.push('Multiple maxed parameters detected. This is an unrealistic "perfect storm" scenario rarely (if ever) observed in nature.');
+    }
+    
+    // Check for unrealistically low/zero "dead atmosphere" trolling
+    const zeroCount = [
+      data.CAPE === 0,
+      data.SRH === 0,
+      data.LAPSE_RATE_0_3 === 0,
+      data.PWAT === 0
+    ].filter(Boolean).length;
+    
+    if (zeroCount >= 3) {
+      warnings.push('Multiple zero parameters detected. This represents a completely stable atmosphere with no tornado potential. Check your inputs.');
+    }
+    
+    // Temperature/dewpoint relationship checks
+    if (data.TEMP < -20 && data.CAPE > 2000) {
+      warnings.push('High CAPE with very cold temperatures is meteorologically unrealistic for tornado environments.');
+    }
+    
+    // Check for physically impossible combinations
+    if (data.DEWPOINT > data.TEMP) {
+      warnings.push('Dewpoint cannot exceed temperature. Adjusting dewpoint.');
+      data.DEWPOINT = data.TEMP;
+    }
+    
+    // Extreme CAPE with very low moisture is unrealistic
+    if (data.CAPE > 5000 && data.PWAT < 0.5) {
+      warnings.push('Very high CAPE with very low PWAT is meteorologically unlikely.');
+    }
+    
+    // Extreme VTP requires extreme other parameters
+    if (data.VTP > 12 && (data.CAPE < 2000 || data.SRH < 300)) {
+      warnings.push('VTP > 12 is extremely rare and requires very high CAPE and SRH.');
+    }
+    
+    // 100% RH everywhere is unrealistic
+    if (data.SURFACE_RH === 100 && data.RH_MID === 100) {
+      warnings.push('100% RH at all levels is unrealistic. Atmospheric profiles have moisture variability.');
+    }
+    
+    // Check for "all parameters set to 1" trolling
+    const onesCount = [
+      data.CAPE === 1,
+      data.SRH === 1,
+      data.LAPSE_RATE_0_3 === 1
+    ].filter(Boolean).length;
+    
+    if (onesCount >= 3) {
+      warnings.push('Multiple parameters set to 1. This appears to be invalid test data rather than realistic atmospheric conditions.');
+    }
+
+    // Display warnings
+    const warningDiv = document.getElementById('validationWarnings');
+    if (warnings.length > 0 && warningDiv) {
+      warningDiv.innerHTML = warnings.map(w => `<div class="warning-item">${w}</div>`).join('');
+      warningDiv.style.display = 'block';
+    } else if (warningDiv) {
+      warningDiv.style.display = 'none';
+    }
+    
+    return data;
+  }
+
   function calculate_probabilities(data) {
+    // Validate and fix inputs first
+    data = validateInputs(data);
+    
     const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
     const recordMax = {
       TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
@@ -721,6 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
       factors.map(f => `${f.name}: <span style="color:#fff;font-weight:700">${f.chance}%</span>`).join('<br>');
   }
 
+  // Auto-analyze on input changes
   ids.forEach(id => {
     const el = get(id);
     if (el) {

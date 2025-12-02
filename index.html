@@ -49,10 +49,6 @@
                 <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
               </div>
               <div class="input-row">
-                <label for="STP" class="label-title">STP</label>
-                <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
-              </div>
-              <div class="input-row">
                 <label for="STORM_SPEED" class="label-title">Storm Speed (mph)</label>
                 <input id="STORM_SPEED" type="number" step="0.1" min="0" max="200" placeholder="">
               </div>
@@ -80,10 +76,6 @@
                 <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
                 <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
               </div>
-              <div class="input-row">
-                <label for="VTP" class="label-title">VTP</label>
-                <input id="VTP" type="number" step="1" min="0" max="16" placeholder="">
-              </div>
             </div>
           </div>
 
@@ -92,6 +84,9 @@
             <button id="reset" type="reset" class="btn ghost">Reset</button>
             <button id="exportBtn" type="button" class="btn outline">Export PNG</button>
           </div>
+          
+          <!-- Validation warnings -->
+          <div id="validationWarnings" class="validation-warnings" style="display:none;"></div>
         </form>
       </aside>
 

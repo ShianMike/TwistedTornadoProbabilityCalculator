@@ -69,6 +69,29 @@ input::placeholder{color:rgba(255,255,255,0.12)}
 .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
 .btn.outline{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff}
 
+/* validation warnings */
+.validation-warnings {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 152, 0, 0.08);
+  border: 1px solid rgba(255, 152, 0, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.warning-item {
+  color: #ffb74d;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.warning-item:last-child {
+  margin-bottom: 0;
+}
+
 /* right */
 .right-col{display:flex;flex-direction:column;gap:18px;position:relative}
 

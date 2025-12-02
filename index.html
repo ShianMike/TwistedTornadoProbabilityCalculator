@@ -26,57 +26,65 @@
           <h2>Inputs</h2>
 
           <div class="grid-2">
-            <label>
-              <span class="label-title">Temperature (F)</span>
-              <input id="TEMP" type="number" step="0.1" min="-50" max="140" placeholder="">
-            </label>
+            <!-- LEFT COLUMN INPUTS -->
+            <div class="input-panel">
+              <div class="input-row">
+                <label for="TEMP" class="label-title">Temperature (F)</label>
+                <input id="TEMP" type="number" step="0.1" min="-50" max="140" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="CAPE" class="label-title">CAPE (J/kg)</label>
+                <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="LAPSE_RATE_0_3" class="label-title">0-3km Lapse Rate (C/km)</label>
+                <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="PWAT" class="label-title">PWAT (in)</label>
+                <input id="PWAT" type="number" step="0.01" min="0" max="3.5" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="SURFACE_RH" class="label-title">Surface RH (%)</label>
+                <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="STP" class="label-title">STP</label>
+                <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="STORM_SPEED" class="label-title">Storm Speed (mph)</label>
+                <input id="STORM_SPEED" type="number" step="0.1" min="0" max="200" placeholder="">
+              </div>
+            </div>
 
-            <label>
-              <span class="label-title">Dewpoint (F)</span>
-              <input id="DEWPOINT" type="number" step="0.1" min="-50" max="120" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">CAPE (J/kg)</span>
-              <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">0-3km Lapse Rate (C/km)</span>
-              <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">Surface RH (%)</span>
-              <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">PWAT (in)</span>
-              <input id="PWAT" type="number" step="0.01" min="0" max="3.5" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">SRH (m²/s²)</span>
-              <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
-            </label>
-
-            <!-- STP moved to left column -->
-            <label>
-              <span class="label-title">STP</span>
-              <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
-            </label>
-
-            <!-- VTP moved to right column -->
-            <label>
-              <span class="label-title">VTP</span>
-              <input id="VTP" type="number" step="1" min="0" max="16" placeholder="">
-            </label>
-
-            <label>
-              <span class="label-title">Storm Speed (mph)</span>
-              <input id="STORM_SPEED" type="number" step="0.1" min="0" max="200" placeholder="">
-            </label>
+            <!-- RIGHT COLUMN INPUTS -->
+            <div class="input-panel">
+              <div class="input-row">
+                <label for="DEWPOINT" class="label-title">Dewpoint (F)</label>
+                <input id="DEWPOINT" type="number" step="0.1" min="-50" max="120" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="CAPE_3KM" class="label-title">3CAPE (J/kg)</label>
+                <input id="CAPE_3KM" type="number" step="1" min="0" max="3000" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="LAPSE_3_6KM" class="label-title">3–6 km Lapse (C/km)</label>
+                <input id="LAPSE_3_6KM" type="number" step="0.1" min="0" max="10" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="SRH" class="label-title">SRH (m²/s²)</label>
+                <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
+                <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="VTP" class="label-title">VTP</label>
+                <input id="VTP" type="number" step="1" min="0" max="16" placeholder="">
+              </div>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -163,9 +171,6 @@
 
           <!-- Special factors will be rendered here, below the EF scale -->
           <div id="specialFactors"></div>
-
-          <!-- tooltip for thermo stat descriptions -->
-          <div id="statTooltip" class="stat-tooltip" role="tooltip" aria-hidden="true"></div>
         </div>
 
         <div class="prob-card card glass" role="region" aria-label="Probability distribution">
@@ -178,6 +183,9 @@
       </section>
     </section>
   </main>
+
+  <!-- Global tooltip for both thermo and chart -->
+  <div id="statTooltip" class="stat-tooltip" role="tooltip" aria-hidden="true"></div>
 
   <footer class="app-footer">
     <p style="font-size: 11px; opacity: 0.6; margin-bottom: 12px; max-width: 600px; margin-left: auto; margin-right: auto;">

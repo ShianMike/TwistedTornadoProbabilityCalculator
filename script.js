@@ -21,6 +21,24 @@ document.addEventListener('DOMContentLoaded', () => {
     VTP: get('sum_VTP')
   };
 
+  // Tornado type descriptions
+  const tornadoDescriptions = {
+    'SIDEWINDER': 'Rotational, narrow tornado often with long track. Dominated by strong low-level rotation (SRH) and storm speed.',
+    'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
+    'WEDGE': 'Wide, rain-fed tornado with broad circulation. Driven by low-level moisture and moderate CAPE. Often rain-wrapped and slow-moving.',
+    'DRILLBIT': 'Thin, tight tornado in dry, fast-moving storms. Often associated with high storm speed and low-level drying.',
+    'CONE': 'Classic mid-range tornado with balanced morphology. Moderately intense with moderate rotation and CAPE.',
+    'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
+  };
+
+  const factorDescriptions = {
+    'Multivortex': 'Presence of multiple vortices or satellites spinning around main tornado core. Indicated by high SRH, VTP, and CAPE.',
+    'Rainwrapped': 'Tornado obscured by heavy rain and precipitation. Higher with increased PWAT and surface moisture.',
+    'Long-track': 'Tornado with extended damage path across ground. Favored by high CAPE, fast storm speed, and strong rotation.'
+  };
+
+  let probChart = null;
+
   function ensurePercentColumn() {
     const wrap = probCanvas && probCanvas.parentElement;
     if (!wrap) return null;
@@ -45,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function readInputs() {
     const out = {};
-    // define same limits as the form (defensive)
     const limits = {
       TEMP: {min:-50, max:140},
       DEWPOINT: {min:-50, max:120},
@@ -56,13 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
       SRH: {min:0, max:1000},
       STP: {min:0, max:64},
       VTP: {min:0, max:16},
-      STORM_SPEED: {min:0, max:200}
+      STORM_SPEED: {min:0, max:200},
+      CAPE_3KM: {min:0, max:3000},
+      LAPSE_3_6KM: {min:0, max:10},
+      RH_MID: {min:0, max:100}
     };
-    ids.forEach(k => {
+    const allIds = [...ids, 'CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'];
+    allIds.forEach(k => {
       const el = get(k);
       let v = el && el.value !== '' ? parseFloat(el.value) : 0;
       if (!isFinite(v)) v = 0;
-      // clamp to limits if available
       if (limits[k]) {
         v = Math.max(limits[k].min, Math.min(limits[k].max, v));
       }
@@ -72,198 +92,190 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function calculate_probabilities(data) {
-		// normalize/clamp helpers
-		const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
-		const recordMax = {
-			TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
-			SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STP: 64, VTP: 16, STORM_SPEED: 120
-		};
+    const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
+    const recordMax = {
+      TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
+      SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STP: 64, VTP: 16, STORM_SPEED: 120,
+      CAPE_3KM: 3000, LAPSE_3_6KM: 10, RH_MID: 100
+    };
 
-		// ensure numeric defaults
-		Object.keys(recordMax).forEach(k => { if (typeof data[k] !== 'number') data[k] = 0; });
+    Object.keys(recordMax).forEach(k => { if (typeof data[k] !== 'number') data[k] = 0; });
 
-		// normalized metrics [0..1]
-		const capeN    = clamp(data.CAPE / recordMax.CAPE);
-		const srhN     = clamp(data.SRH  / recordMax.SRH);
-		const stpN     = clamp(data.STP  / recordMax.STP);
-		const vtpN     = clamp(data.VTP  / recordMax.VTP);
-		const lapseN   = clamp((data.LAPSE_RATE_0_3 - 1) / (recordMax.LAPSE_RATE_0_3 - 1));
-		const pwatN    = clamp(data.PWAT / recordMax.PWAT);
-		const rhN      = clamp(data.SURFACE_RH / recordMax.SURFACE_RH);
-		const speedN   = clamp(data.STORM_SPEED / recordMax.STORM_SPEED);
+    const capeN    = clamp(data.CAPE / recordMax.CAPE);
+    const srhN     = clamp(data.SRH / recordMax.SRH);
+    const stpN     = clamp(data.STP / recordMax.STP);
+    const vtpN     = clamp(data.VTP / recordMax.VTP);
+    const lapseN   = clamp((data.LAPSE_RATE_0_3 - 1) / (recordMax.LAPSE_RATE_0_3 - 1));
+    const pwatN    = clamp(data.PWAT / recordMax.PWAT);
+    const rhN      = clamp(data.SURFACE_RH / recordMax.SURFACE_RH);
+    const speedN   = clamp(data.STORM_SPEED / recordMax.STORM_SPEED);
+    const cape3kmN = clamp(data.CAPE_3KM / recordMax.CAPE_3KM);
+    const lapse36N = clamp(data.LAPSE_3_6KM / recordMax.LAPSE_3_6KM);
+    const rhMidN   = clamp(data.RH_MID / recordMax.RH_MID);
 
-		// realistic flags
-		const temp_spread = data.TEMP - data.DEWPOINT;
-		const is_soupy = (temp_spread <= 4) && (data.SURFACE_RH >= 75);
-		const is_moist = (data.SURFACE_RH >= 65);
-		const is_dry = (temp_spread >= 12) && (data.SURFACE_RH <= 50);
+    const temp_spread = data.TEMP - data.DEWPOINT;
+    const is_dry = (temp_spread >= 12) && (data.SURFACE_RH <= 50);
+    const mid_dry = rhMidN <= 0.4;
+    const mid_moist = rhMidN >= 0.7;
 
-		// base priors (small starting values so contributions dominate)
-		const scores = {
-			'WEDGE': 4,
-			'STOVEPIPE': 4,
-			'DRILLBIT': 3,
-			'CONE': 5,
-			'ROPE': 2,
-			'SIDEWINDER': 4
-		};
+    const scores = {
+      'WEDGE': 4,
+      'STOVEPIPE': 4,
+      'DRILLBIT': 3,
+      'CONE': 5,
+      'ROPE': 2,
+      'SIDEWINDER': 4
+    };
 
-		// -------------------------
-		// WEDGE (wide, rain-fed)
-		// - Driven primarily by low-level moisture: PWAT + surface RH
-		// - Needs moderate CAPE to sustain a broad updraft
-		// - Penalized by strong low-level rotation (SRH), high VTP, and very fast translation
-		// -------------------------
-		const moistFactor = clamp(pwatN * 0.7 + rhN * 0.3);
-		scores.WEDGE += moistFactor * 55;           // moisture is primary driver
-		if (moistFactor > 0.35) scores.WEDGE += capeN * 10; // CAPE helps only when moist
-		scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22 - vtpN * 18);
-		if (speedN > 0.65) scores.WEDGE = Math.max(1, scores.WEDGE - 8);
+    const moistFactor = clamp(pwatN * 0.7 + rhN * 0.3);
+    scores.WEDGE += moistFactor * 55;
+    if (moistFactor > 0.35) scores.WEDGE += capeN * 10;
+    if (mid_moist) scores.WEDGE += rhMidN * 6;
+    else if (mid_dry) scores.WEDGE -= 4;
+    scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22 - vtpN * 18);
+    if (speedN > 0.65) scores.WEDGE = Math.max(1, scores.WEDGE - 8);
 
-		// -------------------------
-		// STOVEPIPE (very narrow, violent)
-		// - Favored by very steep low-level lapse rates and high VTP
-		// - Also benefits from CAPE (to supply updraft) and some SRH
-		// -------------------------
-		scores.STOVEPIPE += lapseN * 48;  // strong lapse -> concentrated updraft
-		// stronger VTP influence so changing VTP has clearer impact
-		scores.STOVEPIPE += vtpN * 52;    // violent parameter pushes toward stovepipe
-		scores.STOVEPIPE += capeN * 10;
-		scores.STOVEPIPE += srhN * 6;
+    // -------------------------
+    // STOVEPIPE (very narrow, violent)
+    // - Favored by very steep low-level lapse rates and high VTP
+    // - Also benefits from CAPE (to supply updraft) and some SRH
+    // - 3CAPE and 3–6 km lapse affect narrow core intensity
+    // - RARE: requires extreme convergence of multiple factors
+    // -------------------------
+    // Base: only reward when lapse is VERY steep (> 0.6 normalized = ~9 C/km)
+    if (lapseN > 0.6) {
+      scores.STOVEPIPE += lapseN * 20;  // reduced from 28; still matters but less dominant
+    } else {
+      scores.STOVEPIPE -= 12;  // increased penalty for weak lapse
+    }
+    // VTP is important but must be very high (requires threshold)
+    if (vtpN > 0.5) {
+      scores.STOVEPIPE += vtpN * 24;  // reduced from 36; only rewards high VTP
+    } else {
+      scores.STOVEPIPE -= 4;  // penalize moderate VTP
+    }
+    // CAPE must be present but not excessive (narrower range)
+    if (capeN >= 0.3) scores.STOVEPIPE += capeN * 8;
+    else scores.STOVEPIPE -= 6;
+    // SRH is minimal for stovepipe (they're tight cores, not rotational)
+    scores.STOVEPIPE += srhN * 2;
+    // 3CAPE helps but with threshold
+    if (cape3kmN > 0.4) scores.STOVEPIPE += cape3kmN * 6;
+    // Mid-level lapse matters but less than low-level
+    if (lapse36N > 0.3) scores.STOVEPIPE += lapse36N * 3;
+    // Penalize if conditions favor other types
+    // High moisture pushes toward WEDGE
+    if (pwatN > 0.6 || rhN > 0.75) scores.STOVEPIPE -= 8;
+    // Moderate rotation with lower lapse favors SIDEWINDER
+    if (srhN > 0.4 && lapseN < 0.5) scores.STOVEPIPE -= 6;
+    scores.STOVEPIPE = Math.max(1, scores.STOVEPIPE);
 
-		// -------------------------
-		// SIDEWINDER (rotational, often fast/long-track narrow tornado)
-		// - Dominated by SRH (low-level rotation)
-		// - Boosted by VTP and storm speed
-		// -------------------------
-		scores.SIDEWINDER += srhN * 60;
-		// VTP also supports sidewinder (violent parameter) — increase impact
-		scores.SIDEWINDER += vtpN * 36;
-		scores.SIDEWINDER += speedN * 12;
+    if (srhN > 0.3) {
+      scores.SIDEWINDER += srhN * 40;
+    } else {
+      scores.SIDEWINDER -= 6;
+    }
+    scores.SIDEWINDER += vtpN * 18;
+    if (speedN > 0.4) scores.SIDEWINDER += speedN * 8;
 
-		// -------------------------
-		// DRILLBIT (thin, often in dry, fast storms)
-		// - Favored by dry boundary layer, high lapse, and fast storm motion
-		// - Moderate CAPE helps support updraft intensity
-		// -------------------------
-		if (is_dry) scores.DRILLBIT += 30;
-		scores.DRILLBIT += lapseN * 14;
-		if (speedN > 0.55) scores.DRILLBIT += speedN * 28;
-		scores.DRILLBIT += capeN * 6;
+    if (is_dry) scores.DRILLBIT += 18;
+    if (lapseN > 0.4) scores.DRILLBIT += lapseN * 10;
+    if (speedN > 0.5) {
+      scores.DRILLBIT += speedN * 18;
+    } else {
+      scores.DRILLBIT -= 5;
+    }
+    if (capeN >= 0.2) scores.DRILLBIT += capeN * 4;
+    if (mid_dry) scores.DRILLBIT += rhMidN * 6;
 
-		// -------------------------
-		// CONE (classic, mid-range tornado)
-		// - Moderately favored by CAPE (buoyancy) and moderate SRH
-		// - PWAT helps keep it from being rain-wrapped (moderate positive)
-		// -------------------------
-		scores.CONE += capeN * 26;
-		scores.CONE += srhN * 8;
-		scores.CONE += pwatN * 6;
+    if (capeN >= 0.25) scores.CONE += capeN * 16;
+    else scores.CONE -= 4;
+    if (srhN > 0.2) scores.CONE += srhN * 6;
+    if (pwatN >= 0.2 && pwatN <= 0.65) scores.CONE += pwatN * 8;
+    else if (pwatN > 0.65) scores.CONE -= 3;
+    if (cape3kmN > 0.25) scores.CONE += cape3kmN * 3;
 
-		// -------------------------
-		// ROPE (weak, decaying funnels)
-		// - Favored in low-CAPE, weaker flow, or late-stage dissipation
-		// - Slow storm motion increases chance
-		// -------------------------
-		if (capeN <= 0.18) scores.ROPE += 24;
-		if (speedN <= 0.35) scores.ROPE += 10;
-		// small bonus from low PWAT (less likelihood of broad wedge)
-		if (pwatN < 0.25) scores.ROPE += 6;
+    if (capeN <= 0.2) scores.ROPE += 22;
+    if (capeN <= 0.08) scores.ROPE += 14;
+    if (speedN <= 0.35) scores.ROPE += 12;
+    if (pwatN < 0.2) scores.ROPE += 8;
 
-		// enforce minima
-		Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k]); });
+    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k]); });
 
-		// modest STP multiplier (reflects overall favorable composite)
-		const stpMultiplier = 0.9 + (stpN * 0.6); // conservative scaling
-		Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * stpMultiplier); });
+    const stpMultiplier = 0.9 + (stpN * 0.6);
+    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * stpMultiplier); });
 
-		// convert to percentages
-		const total = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
-		const percentages = Object.keys(scores).map(k => ({ Type: k, Prob: Math.round((scores[k] / total) * 1000) / 10 }));
+    const total = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
+    const percentages = Object.keys(scores).map(k => ({ Type: k, Prob: Math.round((scores[k] / total) * 1000) / 10 }));
+    const types = percentages.sort((a,b) => b.Prob - a.Prob);
 
-		const types = percentages.sort((a,b) => b.Prob - a.Prob);
+    let multiVortexChance = Math.round(clamp(srhN * 0.6 + vtpN * 0.25 + capeN * 0.15, 0, 1) * 100);
+    multiVortexChance = Math.max(1, Math.min(95, multiVortexChance));
 
-		// Special factors (separate from morphology distribution)
-		let multiVortexChance = Math.round(clamp(srhN * 0.6 + vtpN * 0.25 + capeN * 0.15, 0, 1) * 100);
-		multiVortexChance = Math.max(1, Math.min(95, multiVortexChance));
+    let rainwrappedChance = Math.round(clamp(pwatN * 0.68 + rhN * 0.32, 0, 1) * 100);
+    rainwrappedChance = Math.max(1, Math.min(95, rainwrappedChance));
 
-		let rainwrappedChance = Math.round(clamp(pwatN * 0.68 + rhN * 0.32, 0, 1) * 100);
-		rainwrappedChance = Math.max(1, Math.min(95, rainwrappedChance));
+    let longTrackChance = Math.round(clamp(capeN * 0.6 + speedN * 0.4 + srhN * 0.1, 0, 1) * 100);
+    longTrackChance = Math.max(1, Math.min(95, longTrackChance));
 
-		let longTrackChance = Math.round(clamp(capeN * 0.6 + speedN * 0.4 + srhN * 0.1, 0, 1) * 100);
-		longTrackChance = Math.max(1, Math.min(95, longTrackChance));
-
-		return {
-			types: types,
-			factors: [
-				{ name: 'Multivortex', chance: multiVortexChance },
-				{ name: 'Rainwrapped', chance: rainwrappedChance },
-				{ name: 'Long-track', chance: longTrackChance }
-			]
-		};
+    return {
+      types: types,
+      factors: [
+        { name: 'Multivortex', chance: multiVortexChance },
+        { name: 'Rainwrapped', chance: rainwrappedChance },
+        { name: 'Long-track', chance: longTrackChance }
+      ]
+    };
   }
 
   function estimate_wind(data) {
-	  // Composite severity-based wind estimator (uses more than VTP)
-	  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+    const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
-	  // reasonable normalization maxima (same as used elsewhere)
-	  const MAX = { CAPE: 10226, SRH: 1000, STP: 64, VTP: 16, LAPSE: 12, SPEED: 120 };
+    const MAX = { CAPE: 10226, SRH: 1000, STP: 64, VTP: 16, LAPSE: 12, SPEED: 120 };
 
-	  const vtpN = clamp((data.VTP || 0) / MAX.VTP);
-	  const stpN = clamp((data.STP || 0) / MAX.STP);
-	  const capeN = clamp((data.CAPE || 0) / MAX.CAPE);
-	  const srhN = clamp((data.SRH || 0) / MAX.SRH);
-	  const lapseN = clamp(((data.LAPSE_RATE_0_3 || 1) - 1) / (MAX.LAPSE - 1));
-	  const speedN = clamp((data.STORM_SPEED || 0) / MAX.SPEED);
+    const vtpN = clamp((data.VTP || 0) / MAX.VTP);
+    const stpN = clamp((data.STP || 0) / MAX.STP);
+    const capeN = clamp((data.CAPE || 0) / MAX.CAPE);
+    const srhN = clamp((data.SRH || 0) / MAX.SRH);
+    const lapseN = clamp(((data.LAPSE_RATE_0_3 || 1) - 1) / (MAX.LAPSE - 1));
+    const speedN = clamp((data.STORM_SPEED || 0) / MAX.SPEED);
 
-	  // Tunable weights (increase VTP influence so VTP changes are more decisive)
-	  const w = { vtp: 0.60, stp: 0.15, cape: 0.12, srh: 0.08, lapse: 0.03, speed: 0.02 };
+    // Increased weights to produce stronger estimates, especially VTP and STP
+    const w = { vtp: 0.75, stp: 0.25, cape: 0.18, srh: 0.15, lapse: 0.08, speed: 0.05 };
 
-	  const severity = clamp(
-	    vtpN * w.vtp +
-	    stpN * w.stp +
-	    capeN * w.cape +
-	    srhN * w.srh +
-	    lapseN * w.lapse +
-	    speedN * w.speed,
-	    0, 1
-	  );
+    // Calculate raw severity (can exceed 1.0 for extreme cases)
+    let severity = vtpN * w.vtp + stpN * w.stp + capeN * w.cape + srhN * w.srh + lapseN * w.lapse + speedN * w.speed;
+    
+    // Apply non-linear scaling: boost mid-to-high values more aggressively
+    // This makes moderate parameters produce stronger winds
+    severity = Math.pow(severity, 0.75); // power < 1 shifts distribution upward
+    severity = clamp(severity, 0, 1.5); // allow exceeding 1.0 for extreme cases
 
-	  // Map severity [0..1] to a continuous wind estimate.
-	  // Base range chosen to cover EF0-ish up to EF5 record.
-	  const MIN_BASE = 60;   // lower-bound base for weakest events
-	  const MAX_BASE = 333;  // record upper bound
-	  // central estimate scales with severity
-	  const center = Math.round(MIN_BASE + severity * (MAX_BASE - MIN_BASE));
-	  // uncertainty window: narrower for low severity, wider for high severity
-	  const spread = Math.round(20 + severity * 100);
+    // Wider, more realistic wind speed range
+    const MIN_BASE = 75;   // start higher (weak tornadoes still ~EF0-1)
+    const MAX_BASE = 320;  // realistic upper bound for EF5
+    
+    // Center estimate now uses extended severity range
+    const center = Math.round(MIN_BASE + severity * (MAX_BASE - MIN_BASE));
+    // Wider uncertainty spread for higher intensities
+    const spread = Math.round(30 + severity * 90);
 
-	  const est_min = Math.max(20, center - Math.round(spread * 0.6));
-	  const est_max = Math.min(MAX_BASE, center + Math.round(spread * 0.6));
+    const est_min = Math.max(20, center - Math.round(spread * 0.6));
+    const est_max = Math.min(MAX_BASE, center + Math.round(spread * 0.6));
 
-	  // Label by EF-style thresholds (approximate)
-	  let label = 'EF0-1';
-	  const mid = (est_min + est_max) / 2;
-	  if (mid >= 200) label = 'EF4/EF5';
-	  else if (mid >= 165) label = 'EF4';
-	  else if (mid >= 135) label = 'EF3';
-	  else if (mid >= 111) label = 'EF2';
-	  else if (mid >= 65) label = 'EF1';
-	  else label = 'EF0 (landspout)';
+    let label = 'EF0-1';
+    const mid = (est_min + est_max) / 2;
+    if (mid >= 200) label = 'EF4/EF5';
+    else if (mid >= 165) label = 'EF4';
+    else if (mid >= 135) label = 'EF3';
+    else if (mid >= 111) label = 'EF2';
+    else if (mid >= 86) label = 'EF1';
+    else label = 'EF0 (landspout)';
 
-	  return { est_min, est_max, label };
-}
+    return { est_min, est_max, label };
+  }
 
   function populateSummary(data) {
-    // Show 3CAPE and 3-6KM LAPSE as scaled values (for display only)
-    // 3CAPE: 60% of CAPE, rounded, clamped to [1, 200]
-    let threeCAPE = Math.round(data.CAPE * 0.6);
-    threeCAPE = Math.max(1, Math.min(200, threeCAPE));
-
-    const threeSixLapse = Math.round(data.LAPSE_RATE_0_3 * 0.8 * 10) / 10;
-    const sevenHundredRH = Math.round(data.SURFACE_RH * 0.7);
-
     sum.TEMP && (sum.TEMP.textContent = data.TEMP ? String(data.TEMP) : '—');
     sum.DEW && (sum.DEW.textContent = data.DEWPOINT ? String(data.DEWPOINT) : '—');
     sum.CAPE && (sum.CAPE.textContent = data.CAPE ? String(data.CAPE) : '—');
@@ -274,16 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
     sum.STP && (sum.STP.textContent = data.STP ? String(data.STP) : '—');
     sum.VTP && (sum.VTP.textContent = data.VTP ? String(data.VTP) : '—');
 
-    // These IDs must exist in your HTML for the extra fields
     const sum3CAPE = document.getElementById('sum_3CAPE');
     const sum36LAPSE = document.getElementById('sum_36LAPSE');
     const sum700RH = document.getElementById('sum_700RH');
-    if (sum3CAPE) sum3CAPE.textContent = threeCAPE ? String(threeCAPE) : '—';
-    if (sum36LAPSE) sum36LAPSE.textContent = threeSixLapse ? String(threeSixLapse) : '—';
-    if (sum700RH) sum700RH.textContent = sevenHundredRH ? String(sevenHundredRH) : '—';
+    if (sum3CAPE) sum3CAPE.textContent = data.CAPE_3KM ? String(data.CAPE_3KM) : '—';
+    if (sum36LAPSE) sum36LAPSE.textContent = data.LAPSE_3_6KM ? String(data.LAPSE_3_6KM) : '—';
+    if (sum700RH) sum700RH.textContent = data.RH_MID ? String(data.RH_MID) : '—';
   }
-
-  let probChart = null;
 
   function tryRegisterDataLabels() {
     try {
@@ -344,15 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.save();
     ctx.scale(DPR, DPR);
 
-    // Fill the entire bar with color ranges, no gaps at ends
-    // EF0/landspout: white, EF1: green, EF2: yellow, EF3: orange, EF4: red, EF5+: pink
     const ranges = [
-      {start: 0, end: 65, color: '#ffffff'},      // Landspout/EF0
-      {start: 65, end: 110, color: '#4caf50'},    // EF1 (green)
-      {start: 110, end: 135, color: '#ffeb3b'},   // EF2 (yellow)
-      {start: 135, end: 165, color: '#ff9800'},   // EF3 (orange)
-      {start: 165, end: 200, color: '#e53935'},   // EF4 (red)
-      {start: 200, end: 350, color: '#ec407a'}    // EF5+ (pink)
+      {start: 0, end: 65, color: '#ffffff'},
+      {start: 65, end: 110, color: '#4caf50'},
+      {start: 110, end: 135, color: '#ffeb3b'},
+      {start: 135, end: 165, color: '#ff9800'},
+      {start: 165, end: 200, color: '#e53935'},
+      {start: 200, end: 350, color: '#ec407a'}
     ];
     const minX = 0, maxX = 350;
     const pad = 6;
@@ -559,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       probChart.update('none');
       requestAnimationFrame(() => updatePercentColumn(values, labels));
       probCanvas.style.pointerEvents = 'auto';
+      setupChartTooltip();
       return;
     }
 
@@ -610,10 +618,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
     probChart = new Chart(ctx, chartOptions);
     requestAnimationFrame(() => updatePercentColumn(values, labels));
+    requestAnimationFrame(() => setupChartTooltip());
     probCanvas.style.pointerEvents = 'auto';
   }
 
-  // Auto-analysis with debounce
+  function setupChartTooltip() {
+    if (!probChart || !probChart.canvas) return;
+    
+    const tooltip = document.getElementById('statTooltip');
+    if (!tooltip) return;
+
+    const canvas = probChart.canvas;
+
+    if (canvas._chartMouseMove) {
+      canvas.removeEventListener('mousemove', canvas._chartMouseMove);
+    }
+    if (canvas._chartMouseLeave) {
+      canvas.removeEventListener('mouseleave', canvas._chartMouseLeave);
+    }
+    
+    function handleChartMouseMove(e) {
+      if (tooltip.dataset.source === 'thermo') return;
+
+      const rect = canvas.getBoundingClientRect();
+      const canvasY = e.clientY - rect.top;
+
+      const meta = probChart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) return;
+
+      let hoveredType = null;
+      meta.data.forEach((datapoint, idx) => {
+        if (datapoint && typeof datapoint.y === 'number') {
+          const barHeight = datapoint.height || 20;
+          if (Math.abs(canvasY - datapoint.y) < barHeight) {
+            hoveredType = probChart.data.labels[idx];
+          }
+        }
+      });
+
+      if (hoveredType && tornadoDescriptions[hoveredType]) {
+        tooltip.innerHTML = `<strong>${hoveredType}</strong><br>${tornadoDescriptions[hoveredType]}`;
+        tooltip.classList.add('visible');
+        tooltip.setAttribute('aria-hidden', 'false');
+        tooltip.dataset.source = 'chart';
+        // Position near cursor using fixed positioning
+        const left = Math.min(window.innerWidth - 300, Math.max(8, e.clientX + 12));
+        const top = Math.min(window.innerHeight - 120, Math.max(8, e.clientY + 12));
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+      } else {
+        if (tooltip.dataset.source === 'chart') {
+          tooltip.classList.remove('visible');
+          tooltip.setAttribute('aria-hidden', 'true');
+          delete tooltip.dataset.source;
+        }
+      }
+    }
+
+    function handleChartMouseLeave() {
+      if (tooltip.dataset.source === 'chart') {
+        tooltip.classList.remove('visible');
+        tooltip.setAttribute('aria-hidden', 'true');
+        delete tooltip.dataset.source;
+      }
+    }
+
+    canvas._chartMouseMove = handleChartMouseMove;
+    canvas._chartMouseLeave = handleChartMouseLeave;
+
+    canvas.addEventListener('mousemove', canvas._chartMouseMove);
+    canvas.addEventListener('mouseleave', canvas._chartMouseLeave);
+  }
+
   let autoAnalysisTimer = null;
   const AUTO_ANALYSIS_DELAY = 500;
 
@@ -636,8 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else windLabel.textContent = 'No estimate yet';
   }
 
-  // --- NEW: Render special factors below the chart ---
-  // Reference the specialFactors container inside thermo-card
   const thermoCard = document.querySelector('.thermo-card');
   const specialFactorsContainer = thermoCard.querySelector('#specialFactors');
 
@@ -647,7 +721,6 @@ document.addEventListener('DOMContentLoaded', () => {
       factors.map(f => `${f.name}: <span style="color:#fff;font-weight:700">${f.chance}%</span>`).join('<br>');
   }
 
-  // Auto-analyze on input changes
   ids.forEach(id => {
     const el = get(id);
     if (el) {
@@ -656,7 +729,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Analyze button handler
+  ['CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'].forEach(id => {
+    const el = get(id);
+    if (el) {
+      el.addEventListener('input', performAnalysis);
+      el.addEventListener('change', performAnalysis);
+    }
+  });
+
   if (analyzeBtn) {
     analyzeBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -664,10 +744,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Reset button handler
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
       ids.forEach(k => {
+        const el = get(k);
+        if (el) el.value = '';
+      });
+      ['CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'].forEach(k => {
         const el = get(k);
         if (el) el.value = '';
       });
@@ -677,12 +760,10 @@ document.addEventListener('DOMContentLoaded', () => {
       renderEmptyProb();
       drawMiniWind(null);
       windLabel.textContent = 'No estimate yet';
-      // Clear special factors
       if (specialFactorsContainer) specialFactorsContainer.innerHTML = '';
     });
   }
 
-  // Export handler
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
       try {
@@ -707,7 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Unable to export. Please ensure all content is loaded.');
       return;
     }
-
     try {
       const canvas = await html2canvas(rightCol, {
         backgroundColor: '#121212',
@@ -715,7 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logging: false,
         useCORS: true
       });
-
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -730,12 +809,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Initial render
   renderEmptyProb();
   drawMiniWind(null);
   if (windLabel) windLabel.textContent = 'No estimate yet';
 
-  // Responsive redraw
   let resizeTimer = null;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -754,7 +831,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   console.log('Twisted Weather Analyzer initialized');
 
-  // Tooltip for thermodynamics labels
   (function setupThermoTooltips(){
     const tooltip = document.getElementById('statTooltip');
     if (!tooltip) return;
@@ -765,28 +841,28 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip.textContent = desc;
       tooltip.classList.add('visible');
       tooltip.setAttribute('aria-hidden','false');
+      tooltip.dataset.source = 'thermo';
       positionTip(e);
     }
     function positionTip(e){
-      const rect = (e.currentTarget) ? e.currentTarget.getBoundingClientRect() : (e);
-      const cardRect = document.querySelector('.thermo-card').getBoundingClientRect();
-      // calculate position relative to thermo-card
-      const left = Math.min(cardRect.width - 280, Math.max(8, (rect.left - cardRect.left) + 8));
-      const top = (rect.top - cardRect.top) + rect.height + 6;
+      // Use fixed positioning near the label
+      const rect = e.currentTarget.getBoundingClientRect();
+      const left = Math.min(window.innerWidth - 300, Math.max(8, rect.left + 8));
+      const top = Math.min(window.innerHeight - 120, rect.bottom + 6);
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
     }
     function moveTip(e){
-      // If triggered by mousemove, position near pointer
-      const cardRect = document.querySelector('.thermo-card').getBoundingClientRect();
-      const left = Math.min(cardRect.width - 280, Math.max(8, e.clientX - cardRect.left + 8));
-      const top = Math.min(cardRect.height - 40, e.clientY - cardRect.top + 12);
+      // Position near cursor
+      const left = Math.min(window.innerWidth - 300, Math.max(8, e.clientX + 8));
+      const top = Math.min(window.innerHeight - 120, Math.max(8, e.clientY + 12));
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
     }
     function hideTip(){
       tooltip.classList.remove('visible');
       tooltip.setAttribute('aria-hidden','true');
+      delete tooltip.dataset.source;
     }
     labels.forEach(lbl => {
       lbl.addEventListener('mouseenter', showTip);
@@ -795,7 +871,6 @@ document.addEventListener('DOMContentLoaded', () => {
       lbl.addEventListener('focus', showTip);
       lbl.addEventListener('blur', hideTip);
     });
-    // hide on scroll or resize to avoid stuck tooltip
     window.addEventListener('scroll', hideTip, true);
     window.addEventListener('resize', hideTip);
   })();

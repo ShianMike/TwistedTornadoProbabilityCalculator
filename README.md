@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-Try It
-=======
 ## Try It
->>>>>>> cf82a34 (Hotfix)
 https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
 
 # Play Twisted

@@ -289,7 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Rebalanced weights without VTP and STP
     const w = { cape: 0.45, srh: 0.35, lapse: 0.12, speed: 0.08 };
 
-    // Calculate raw severity (can exceed 1.0 for extreme cases)
     let severity = capeN * w.cape + srhN * w.srh + lapseN * w.lapse + speedN * w.speed;
     
     // Apply non-linear scaling: boost mid-to-high values more aggressively
@@ -318,7 +317,16 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (mid >= 86) label = 'EF1';
     else label = 'EF0 (landspout)';
 
-    return { est_min, est_max, label };
+    // Calculate theoretical maximum if conditions are extreme
+    // Lowered thresholds: CAPE > 7000 AND SRH > 650
+    let theoretical = null;
+    if (severity > 1.1 || (data.CAPE > 7000 && data.SRH > 650)) {
+      const theo_min = est_max;
+      const theo_max = Math.min(550, Math.round(est_max * 1.4 + 50));
+      theoretical = { theo_min, theo_max };
+    }
+
+    return { est_min, est_max, label, theoretical };
   }
 
   function populateSummary(data) {
@@ -411,11 +419,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const H = ch;
     function xFor(v){ return pad + (v-minX)/(maxX-minX) * W; }
 
+    // Draw "WIND SPEED RANGE (MPH)" label above the bar
+    ctx.fillStyle = '#9aa3ad';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '0.5px';
+    ctx.fillText('WIND SPEED RANGE (MPH)', cw / 2, 8);
+
     ranges.forEach(r => {
       const x1 = xFor(r.start), x2 = xFor(r.end);
       const w = Math.max(2, x2 - x1);
       ctx.fillStyle = r.color;
-      roundRect(ctx, x1, (H/2)-8, w, 16, 3, true, false);
+      roundRect(ctx, x1, (H/2)+2, w, 16, 3, true, false);
     });
 
     if (estimate && typeof estimate.est_min === 'number' && typeof estimate.est_max === 'number') {
@@ -428,12 +443,12 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(xMin, H/2);
-      ctx.lineTo(xMax, H/2);
+      ctx.moveTo(xMin, (H/2)+10);
+      ctx.lineTo(xMax, (H/2)+10);
       ctx.stroke();
 
       const cx = (xMin + xMax) / 2;
-      const cy = H/2;
+      const cy = (H/2)+10;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       const s = 6;
@@ -444,14 +459,40 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px Inter, sans-serif';
+      // Draw numbers with dark background for better readability
+      ctx.font = 'bold 11px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${estimate.est_min}`, xMin, H - 2);
-      ctx.fillText(`${estimate.est_max}`, xMax, H - 2);
+      ctx.textBaseline = 'middle';
+      
+      // Measure text to create background boxes
+      const minText = `${estimate.est_min}`;
+      const maxText = `${estimate.est_max}`;
+      const minMetrics = ctx.measureText(minText);
+      const maxMetrics = ctx.measureText(maxText);
+      
+      const bgPadding = 4;
+      const bgHeight = 16;
+      
+      // Draw background for min value
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      roundRect(ctx, xMin - (minMetrics.width / 2) - bgPadding, H - 12, 
+                minMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
+      
+      // Draw min value text
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(minText, xMin, H - 4);
+      
+      // Draw background for max value
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      roundRect(ctx, xMax - (maxMetrics.width / 2) - bgPadding, H - 12,
+                maxMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
+      
+      // Draw max value text
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(maxText, xMax, H - 4);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      roundRect(ctx, pad, (H/2)-8, W, 16, 3, true, false);
+      roundRect(ctx, pad, (H/2)+2, W, 16, 3, true, false);
     }
 
     ctx.restore();
@@ -754,6 +795,21 @@ document.addEventListener('DOMContentLoaded', () => {
     drawMiniWind(data.CAPE > 0 ? estimate : null);
     if (data.CAPE > 0) windLabel.textContent = estimate.label;
     else windLabel.textContent = 'No estimate yet';
+    
+    // Display theoretical wind estimate if available
+    const theoreticalDiv = document.getElementById('theoreticalWind');
+    if (theoreticalDiv && estimate.theoretical) {
+      theoreticalDiv.style.display = 'block';
+      theoreticalDiv.innerHTML = `<strong>Theoretical Maximum:</strong> ${estimate.theoretical.theo_min}–${estimate.theoretical.theo_max} mph<br><span style="font-size:11px;opacity:0.8;">Extreme conditions may support winds beyond measured EF5 thresholds</span>`;
+    } else if (theoreticalDiv) {
+      theoreticalDiv.style.display = 'none';
+    }
+    
+    // Show/hide wind estimate disclaimer
+    const windDisclaimerDiv = document.getElementById('windDisclaimer');
+    if (windDisclaimerDiv) {
+      windDisclaimerDiv.style.display = data.CAPE > 0 ? 'block' : 'none';
+    }
   }
 
   const thermoCard = document.querySelector('.thermo-card');
@@ -806,6 +862,12 @@ document.addEventListener('DOMContentLoaded', () => {
       drawMiniWind(null);
       windLabel.textContent = 'No estimate yet';
       if (specialFactorsContainer) specialFactorsContainer.innerHTML = '';
+      
+      // Hide disclaimers on reset
+      const theoreticalDiv = document.getElementById('theoreticalWind');
+      const windDisclaimerDiv = document.getElementById('windDisclaimer');
+      if (theoreticalDiv) theoreticalDiv.style.display = 'none';
+      if (windDisclaimerDiv) windDisclaimerDiv.style.display = 'none';
     });
   }
 

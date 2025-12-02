@@ -92,6 +92,24 @@ input::placeholder{color:rgba(255,255,255,0.12)}
   margin-bottom: 0;
 }
 
+/* tool disclaimer below input form */
+.tool-disclaimer {
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: rgba(158, 158, 158, 0.04);
+  border: 1px solid rgba(158, 158, 158, 0.12);
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #9aa3ad;
+  opacity: 0.8;
+}
+
+.tool-disclaimer strong {
+  color: #b9cbe0;
+  font-weight: 600;
+}
+
 /* right */
 .right-col{display:flex;flex-direction:column;gap:18px;position:relative}
 
@@ -111,17 +129,38 @@ input::placeholder{color:rgba(255,255,255,0.12)}
 .thermo-grid{display:grid;grid-template-columns: 1fr 1fr;gap:12px}
 
 /* stat panel */
-.stat-panel{background:rgba(255,255,255,0.01);padding:12px;border-radius:10px;min-height:200px;min-width:0;overflow:visible}
-.stat-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;min-height:28px}
+.stat-panel{
+  background:rgba(255,255,255,0.01);
+  padding:12px 12px 12px 12px;
+  border-radius:10px;
+  min-height:150px;
+  min-width:0;
+  overflow:visible;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  gap:0;
+} 
+.stat-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 2px;
+  min-height:30px;
+  flex:0 0 auto;
+}
+
+/* ensure first row in each panel has no extra top margin */
+.stat-row:first-child {
+  margin-top:0;
+  padding-top:0;  /* remove extra top padding from first row */
+}
+
 .k{flex: 1 1 50%; color:#b9cbe0; font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px}
 .v{flex: 0 0 28%; font-weight:700; color:#ffefdf; text-align:right; white-space:nowrap; min-width:56px}
 .unit{flex: 0 0 18%; color:var(--muted); font-size:12px; text-align:right; min-width:48px}
 
-/* Add a subtle italic for scaled/statistical fields */
-.stat-row .k:contains('(scaled)') {
-  font-style: italic;
-  opacity: 0.85;
-}
 
 /* thermo footer with mini wind */
 /* move mini wind into its own block to avoid text overlap */
@@ -187,6 +226,40 @@ input::placeholder{color:rgba(255,255,255,0.12)}
   display:block;
   border-radius:6px;
   background:rgba(0,0,0,0.2);
+}
+
+/* wind estimate disclaimer */
+.wind-disclaimer {
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: rgba(158, 158, 158, 0.06);
+  border: 1px solid rgba(158, 158, 158, 0.15);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #b9cbe0;
+}
+
+.wind-disclaimer strong {
+  color: #dfe9f2;
+  font-weight: 700;
+}
+
+/* theoretical wind estimate for extreme conditions */
+.theoretical-wind {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: rgba(236, 64, 122, 0.08);
+  border: 1px solid rgba(236, 64, 122, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ffb3d1;
+}
+
+.theoretical-wind strong {
+  color: #ec407a;
+  font-weight: 700;
 }
 
 /* probability card and chart sizing */

@@ -2,8 +2,33 @@
 Twisted Weather Analyzer estimates tornado morphology probabilities and theoretical wind speeds using inputs like CAPE, lapse rates, SRH, RH, temperature, dewpoint, PWAT, and storm speed. It provides a thermodynamic summary, EF-scale wind estimate, probability chart, and PNG export.
 https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
 
+# Play Twisted
+https://www.roblox.com/games/6161235818/Twisted
+
 ## Patch Notes
 
+### v1.4
+- **Removed STP & VTP Composite Indices**: Eliminated STP (Significant Tornado Parameter) and VTP (Violent Tornado Parameter) from the tool entirely. These composite indices added unnecessary complexity and were redundant with the raw atmospheric parameters.
+  - Removed calculation functions for STP and VTP
+  - Removed display fields from thermodynamics panel
+  - Tornado type scoring now uses direct CAPE and SRH values instead of composite indices
+  - Wind speed estimation rebalanced to use raw parameters (45% CAPE, 35% SRH, 12% lapse, 8% speed)
+  - Simplified severity multiplier calculations
+- **Wind Speed Range Visualization**: Enhanced the wind speed canvas display:
+  - Added "WIND SPEED RANGE (MPH)" label directly on canvas
+  - Wind speed numbers (min/max) now have dark semi-transparent backgrounds for readability against all color bars
+  - Improved positioning and spacing of all canvas elements
+- **Theoretical Maximum Wind Display**: Added display for extreme conditions:
+  - Shows theoretical maximum wind speeds when CAPE > 7000 J/kg AND SRH > 650 m²/s²
+  - Displays in pink warning box below standard wind estimate
+  - Explains potential for winds beyond measured EF5 thresholds
+- **Wind Estimate Disclaimer**: Added disclaimer below wind speed canvas explaining that estimates are approximate calculations and should not be taken as precise predictions
+- **Tool Disclaimer Repositioned**: Moved main disclaimer from footer to inside the input card for better visibility during data entry
+- **UI Refinements**: 
+  - Fixed stat panel alignment issues (removed extra top padding from first rows)
+  - Improved consistency between left and right stat panel spacing
+  - Reduced minimum panel height from 200px to 150px for cleaner layout
+  
 ### v1.3
 - **Auto-Calculated STP & VTP**: STP (Significant Tornado Parameter) and VTP (Violent Tornado Parameter) are now automatically calculated from atmospheric inputs rather than user-entered. This prevents unrealistic troll values and ensures parameters are meteorologically consistent.
   - STP formula: Based on CAPE, SRH, lapse rate, and dewpoint depression (LCL proxy)

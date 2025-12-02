@@ -88,6 +88,11 @@
           <!-- Validation warnings -->
           <div id="validationWarnings" class="validation-warnings" style="display:none;"></div>
         </form>
+        
+        <!-- Disclaimer below form -->
+        <div class="tool-disclaimer">
+          <strong>Disclaimer:</strong> This is a game/simulation tool for the Twisted. Tornado morphology predictions and wind speed estimates are based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction.
+        </div>
       </aside>
 
       <section class="right-col" aria-live="polite">
@@ -127,11 +132,11 @@
                 <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="3CAPE (scaled) shows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE (scaled)</span>
+                <span class="k" data-desc="3CAPE (scaled) shows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
                 <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE (scaled)</span>
+                <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE</span>
                 <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
               </div>
               <div class="stat-row">
@@ -139,7 +144,7 @@
                 <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="700–500 mb RH (scaled) shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH (scaled)</span>
+                <span class="k" data-desc="700–500 mb RH (scaled) shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH</span>
                 <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
               </div>
             </div>
@@ -151,10 +156,17 @@
               <div class="ef-label">EF Scale Estimate</div>
             </div>
             <div class="miniwrap">
-              <span class="miniwrap-label">Wind Speed Range (mph)</span>
               <canvas id="miniWind" width="300" height="48" aria-hidden="true"></canvas>
             </div>
           </div>
+
+          <!-- Wind estimate disclaimer -->
+          <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+            <strong>Note:</strong> Wind speed estimates are approximate calculations based on atmospheric parameters. These are theoretical estimates and should not be taken as precise predictions. Actual tornado intensity can vary significantly based on local conditions and storm dynamics not captured by this simplified model.
+          </div>
+
+          <!-- Theoretical wind estimate for extreme conditions -->
+          <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
 
           <!-- Special factors will be rendered here, below the EF scale -->
           <div id="specialFactors"></div>
@@ -175,9 +187,6 @@
   <div id="statTooltip" class="stat-tooltip" role="tooltip" aria-hidden="true"></div>
 
   <footer class="app-footer">
-    <p style="font-size: 11px; opacity: 0.6; margin-bottom: 12px; max-width: 600px; margin-left: auto; margin-right: auto;">
-      <strong>Disclaimer:</strong> This is a game/simulation tool for the Twisted weather simulation game. Tornado morphology predictions and wind speed estimates are based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction. For actual tornado threats and safety information, always consult the National Weather Service and official emergency alerts.
-    </p>
     <p>Created by: seanmike</p>
   </footer>
 </body>

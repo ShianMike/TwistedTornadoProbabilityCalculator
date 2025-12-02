@@ -1,10 +1,20 @@
+<<<<<<< HEAD
 Try It
+=======
+## Try It
+>>>>>>> cf82a34 (Hotfix)
 https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
 
 # Play Twisted
 https://www.roblox.com/games/6161235818/Twisted
 
 ## Patch Notes
+
+### v1.4.1 (Hotfix)
+- **Fixed Stat Panel Alignment**: Corrected temperature/dewpoint row spacing alignment issues
+  - Adjusted row padding from 8px to 7px for tighter vertical spacing
+  - Set first row top padding to 2px (was 0px) for perfect horizontal alignment
+  - TEMPERATURE and DEWPOINT rows now align perfectly across left and right panels
 
 ### v1.4
 - **Removed STP & VTP Composite Indices**: Eliminated STP (Significant Tornado Parameter) and VTP (Violent Tornado Parameter) from the tool entirely. These composite indices added unnecessary complexity and were redundant with the raw atmospheric parameters.

@@ -1,14 +1,32 @@
+/**
+ * TWISTED WEATHER ANALYZER - MAIN SCRIPT
+ * Handles form inputs, probability chart rendering, wind estimation,
+ * and interactive tooltips for tornado analysis
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
+  
+  // ============================================================================
+  // DOM ELEMENT REFERENCES
+  // ============================================================================
+  
+  // Core input field IDs for atmospheric parameters
   const ids = ['TEMP','DEWPOINT','CAPE','LAPSE_RATE_0_3','SURFACE_RH','PWAT','SRH','STORM_SPEED'];
+  
+  // Helper function to get elements by ID
   const get = id => document.getElementById(id);
+  
+  // Button references
   const analyzeBtn = get('analyze');
   const resetBtn = get('reset');
   const exportBtn = get('exportBtn');
 
-  const probCanvas = get('probChart');
-  const miniCanvas = get('miniWind');
-  const windLabel = get('windLabel');
+  // Chart canvases
+  const probCanvas = get('probChart');      // Main probability distribution chart
+  const miniCanvas = get('miniWind');       // Mini wind speed visualization
+  const windLabel = get('windLabel');       // EF-scale text label
 
+  // Summary display elements (thermodynamics panel)
   const sum = {
     TEMP: get('sum_TEMP'),
     CAPE: get('sum_CAPE'),
@@ -19,7 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     SRH: get('sum_SRH')
   };
 
-  // Tornado type descriptions
+  // Global chart instance
+  let probChart = null;
+
+  // ============================================================================
+  // TORNADO TYPE DESCRIPTIONS
+  // ============================================================================
+  
+  // Detailed descriptions for each tornado morphology type
+  // Used in chart hover tooltips
   const tornadoDescriptions = {
     'SIDEWINDER': 'Rotational, narrow tornado often with long track. Dominated by strong low-level rotation (SRH) and storm speed.',
     'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
@@ -29,17 +55,93 @@ document.addEventListener('DOMContentLoaded', () => {
     'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
   };
 
-  const factorDescriptions = {
-    'Multivortex': 'Presence of multiple vortices or satellites spinning around main tornado core. Indicated by high SRH, VTP, and CAPE.',
-    'Rainwrapped': 'Tornado obscured by heavy rain and precipitation. Higher with increased PWAT and surface moisture.',
-    'Long-track': 'Tornado with extended damage path across ground. Favored by high CAPE, fast storm speed, and strong rotation.'
-  };
+  // ============================================================================
+  // INPUT READING & VALIDATION
+  // ============================================================================
+  
+  /**
+   * Read all input values from form fields
+   * Validates and clamps values to realistic meteorological limits
+   * @returns {Object} Object containing all atmospheric parameters
+   */
+  function readInputs() {
+    const out = {};
+    
+    // Define acceptable ranges for each parameter
+    const limits = {
+      TEMP: {min:30, max:140},              // Temperature (F)
+      DEWPOINT: {min:30, max:120},          // Dewpoint (F)
+      CAPE: {min:0, max:10226},             // Convective Available Potential Energy (J/kg)
+      LAPSE_RATE_0_3: {min:0, max:12},      // 0-3km lapse rate (C/km)
+      SURFACE_RH: {min:0, max:100},         // Surface relative humidity (%)
+      PWAT: {min:0.5, max:2.5},             // Precipitable water (inches)
+      SRH: {min:0, max:1000},               // Storm-relative helicity (m²/s²)
+      STORM_SPEED: {min:0, max:200},        // Storm motion speed (mph)
+      CAPE_3KM: {min:0, max:300},           // 3km CAPE (J/kg)
+      LAPSE_3_6KM: {min:0, max:10},         // 3-6km lapse rate (C/km)
+      RH_MID: {min:0, max:100}              // 700-500mb relative humidity (%)
+    };
+    
+    // Include additional thermodynamic parameters
+    const allIds = [...ids, 'CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'];
+    
+    // Read and validate each input
+    allIds.forEach(k => {
+      const el = get(k);
+      let v = el && el.value !== '' ? parseFloat(el.value) : 0;
+      if (!isFinite(v)) v = 0;
+      
+      // Clamp to limits if defined
+      if (limits[k]) {
+        v = Math.max(limits[k].min, Math.min(limits[k].max, v));
+      }
+      out[k] = v;
+    });
+    
+    return out;
+  }
 
-  let probChart = null;
+  // ============================================================================
+  // SUMMARY PANEL UPDATE
+  // ============================================================================
+  
+  /**
+   * Update the thermodynamics summary panel with input values
+   * Displays values in the right-side statistics cards
+   * @param {Object} data - Atmospheric parameter object
+   */
+  function populateSummary(data) {
+    // Update left column statistics
+    sum.TEMP && (sum.TEMP.textContent = data.TEMP ? String(data.TEMP) : '—');
+    sum.DEW && (sum.DEW.textContent = data.DEWPOINT ? String(data.DEWPOINT) : '—');
+    sum.CAPE && (sum.CAPE.textContent = data.CAPE ? String(data.CAPE) : '—');
+    sum.LAPSE && (sum.LAPSE.textContent = data.LAPSE_RATE_0_3 ? String(data.LAPSE_RATE_0_3) : '—');
+    sum.PWAT && (sum.PWAT.textContent = data.PWAT ? String(data.PWAT) : '—');
+    sum.RH && (sum.RH.textContent = data.SURFACE_RH ? String(data.SURFACE_RH) : '—');
+    sum.SRH && (sum.SRH.textContent = data.SRH ? String(data.SRH) : '—');
 
+    // Update right column statistics
+    const sum3CAPE = document.getElementById('sum_3CAPE');
+    const sum36LAPSE = document.getElementById('sum_36LAPSE');
+    const sum700RH = document.getElementById('sum_700RH');
+    if (sum3CAPE) sum3CAPE.textContent = data.CAPE_3KM ? String(data.CAPE_3KM) : '—';
+    if (sum36LAPSE) sum36LAPSE.textContent = data.LAPSE_3_6KM ? String(data.LAPSE_3_6KM) : '—';
+    if (sum700RH) sum700RH.textContent = data.RH_MID ? String(data.RH_MID) : '—';
+  }
+
+  // ============================================================================
+  // PERCENTAGE COLUMN MANAGEMENT
+  // ============================================================================
+  
+  /**
+   * Ensure percentage column exists on the right side of probability chart
+   * Creates the column element if it doesn't exist
+   * @returns {HTMLElement|null} The percentage column element
+   */
   function ensurePercentColumn() {
     const wrap = probCanvas && probCanvas.parentElement;
     if (!wrap) return null;
+    
     let pc = wrap.querySelector('#percentCol');
     if (!pc) {
       pc = document.createElement('div');
@@ -59,445 +161,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ensurePercentColumn();
 
-  function readInputs() {
-    const out = {};
-    const limits = {
-      TEMP: {min:-50, max:140},
-      DEWPOINT: {min:-50, max:120},
-      CAPE: {min:0, max:10226},
-      LAPSE_RATE_0_3: {min:0, max:12},
-      SURFACE_RH: {min:0, max:100},
-      PWAT: {min:0, max:3.5},
-      SRH: {min:0, max:1000},
-      STORM_SPEED: {min:0, max:200},
-      CAPE_3KM: {min:0, max:3000},
-      LAPSE_3_6KM: {min:0, max:10},
-      RH_MID: {min:0, max:100}
-    };
-    const allIds = [...ids, 'CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'];
-    allIds.forEach(k => {
-      const el = get(k);
-      let v = el && el.value !== '' ? parseFloat(el.value) : 0;
-      if (!isFinite(v)) v = 0;
-      if (limits[k]) {
-        v = Math.max(limits[k].min, Math.min(limits[k].max, v));
-      }
-      out[k] = v;
-    });
-    
-    return out;
+  // ============================================================================
+  // MINI WIND VISUALIZATION
+  // ============================================================================
+  
+  /**
+   * Draw the mini wind speed visualization canvas
+   * Delegates to ChartRenderer module
+   * @param {HTMLCanvasElement} canvas - Canvas element
+   * @param {Object} estimate - Wind estimate object with min/max values
+   */
+  function drawMiniWind(canvas, estimate) {
+    if (window.ChartRenderer) {
+      window.ChartRenderer.drawMiniWind(canvas, estimate);
+    }
   }
 
-  function validateInputs(data) {
-    const warnings = [];
-    
-    // Check for maxed-out "perfect storm" trolling
-    const maxedCount = [
-      data.CAPE >= 10000,
-      data.SRH >= 900,
-      data.LAPSE_RATE_0_3 >= 11,
-      data.PWAT >= 3.3
-    ].filter(Boolean).length;
-    
-    if (maxedCount >= 3) {
-      warnings.push('Multiple maxed parameters detected. This is an unrealistic "perfect storm" scenario rarely (if ever) observed in nature.');
-    }
-    
-    // Check for unrealistically low/zero "dead atmosphere" trolling
-    const zeroCount = [
-      data.CAPE === 0,
-      data.SRH === 0,
-      data.LAPSE_RATE_0_3 === 0,
-      data.PWAT === 0
-    ].filter(Boolean).length;
-    
-    if (zeroCount >= 3) {
-      warnings.push('Multiple zero parameters detected. This represents a completely stable atmosphere with no tornado potential. Check your inputs.');
-    }
-    
-    // Temperature/dewpoint relationship checks
-    if (data.TEMP < -20 && data.CAPE > 2000) {
-      warnings.push('High CAPE with very cold temperatures is meteorologically unrealistic for tornado environments.');
-    }
-    
-    // Check for physically impossible combinations
-    if (data.DEWPOINT > data.TEMP) {
-      warnings.push('Dewpoint cannot exceed temperature. Adjusting dewpoint.');
-      data.DEWPOINT = data.TEMP;
-    }
-    
-    // Extreme CAPE with very low moisture is unrealistic
-    if (data.CAPE > 5000 && data.PWAT < 0.5) {
-      warnings.push('Very high CAPE with very low PWAT is meteorologically unlikely.');
-    }
-    
-    // Display warnings
-    const warningDiv = document.getElementById('validationWarnings');
-    if (warnings.length > 0 && warningDiv) {
-      warningDiv.innerHTML = warnings.map(w => `<div class="warning-item">${w}</div>`).join('');
-      warningDiv.style.display = 'block';
-    } else if (warningDiv) {
-      warningDiv.style.display = 'none';
-    }
-    
-    return data;
-  }
-
-  function calculate_probabilities(data) {
-    // Validate and fix inputs first
-    data = validateInputs(data);
-    
-    const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
-    const recordMax = {
-      TEMP: 120, DEWPOINT: 90, CAPE: 10226, LAPSE_RATE_0_3: 12,
-      SURFACE_RH: 100, PWAT: 3.5, SRH: 1000, STORM_SPEED: 120,
-      CAPE_3KM: 3000, LAPSE_3_6KM: 10, RH_MID: 100
-    };
-
-    Object.keys(recordMax).forEach(k => { if (typeof data[k] !== 'number') data[k] = 0; });
-
-    const capeN    = clamp(data.CAPE / recordMax.CAPE);
-    const srhN     = clamp(data.SRH / recordMax.SRH);
-    const lapseN   = clamp((data.LAPSE_RATE_0_3 - 1) / (recordMax.LAPSE_RATE_0_3 - 1));
-    const pwatN    = clamp(data.PWAT / recordMax.PWAT);
-    const rhN      = clamp(data.SURFACE_RH / recordMax.SURFACE_RH);
-    const speedN   = clamp(data.STORM_SPEED / recordMax.STORM_SPEED);
-    const cape3kmN = clamp(data.CAPE_3KM / recordMax.CAPE_3KM);
-    const lapse36N = clamp(data.LAPSE_3_6KM / recordMax.LAPSE_3_6KM);
-    const rhMidN   = clamp(data.RH_MID / recordMax.RH_MID);
-
-    const temp_spread = data.TEMP - data.DEWPOINT;
-    const is_dry = (temp_spread >= 12) && (data.SURFACE_RH <= 50);
-    const mid_dry = rhMidN <= 0.4;
-    const mid_moist = rhMidN >= 0.7;
-
-    const scores = {
-      'WEDGE': 4,
-      'STOVEPIPE': 4,
-      'DRILLBIT': 3,
-      'CONE': 5,
-      'ROPE': 2,
-      'SIDEWINDER': 4
-    };
-
-    const moistFactor = clamp(pwatN * 0.7 + rhN * 0.3);
-    scores.WEDGE += moistFactor * 55;
-    if (moistFactor > 0.35) scores.WEDGE += capeN * 10;
-    if (mid_moist) scores.WEDGE += rhMidN * 6;
-    else if (mid_dry) scores.WEDGE -= 4;
-    scores.WEDGE = Math.max(1, scores.WEDGE - srhN * 22);
-    if (speedN > 0.65) scores.WEDGE = Math.max(1, scores.WEDGE - 8);
-
-    // -------------------------
-    // STOVEPIPE (very narrow, violent)
-    // - Favored by very steep low-level lapse rates and high VTP
-    // - Also benefits from CAPE (to supply updraft) and some SRH
-    // - 3CAPE and 3–6 km lapse affect narrow core intensity
-    // - RARE: requires extreme convergence of multiple factors
-    // -------------------------
-    // Base: only reward when lapse is VERY steep (> 0.6 normalized = ~9 C/km)
-    if (lapseN > 0.6) {
-      scores.STOVEPIPE += lapseN * 20;  // reduced from 28; still matters but less dominant
-    } else {
-      scores.STOVEPIPE -= 12;  // increased penalty for weak lapse
-    }
-    // CAPE must be present but not excessive (narrower range)
-    if (capeN >= 0.3) scores.STOVEPIPE += capeN * 8;
-    else scores.STOVEPIPE -= 6;
-    // SRH is minimal for stovepipe (they're tight cores, not rotational)
-    scores.STOVEPIPE += srhN * 2;
-    // 3CAPE helps but with threshold
-    if (cape3kmN > 0.4) scores.STOVEPIPE += cape3kmN * 6;
-    // Mid-level lapse matters but less than low-level
-    if (lapse36N > 0.3) scores.STOVEPIPE += lapse36N * 3;
-    // Penalize if conditions favor other types
-    // High moisture pushes toward WEDGE
-    if (pwatN > 0.6 || rhN > 0.75) scores.STOVEPIPE -= 8;
-    // Moderate rotation with lower lapse favors SIDEWINDER
-    if (srhN > 0.4 && lapseN < 0.5) scores.STOVEPIPE -= 6;
-    scores.STOVEPIPE = Math.max(1, scores.STOVEPIPE);
-
-    if (srhN > 0.3) {
-      scores.SIDEWINDER += srhN * 40;
-    } else {
-      scores.SIDEWINDER -= 6;
-    }
-    scores.SIDEWINDER += capeN * 12;  // Use CAPE instead of VTP
-    if (speedN > 0.4) scores.SIDEWINDER += speedN * 8;
-
-    if (is_dry) scores.DRILLBIT += 18;
-    if (lapseN > 0.4) scores.DRILLBIT += lapseN * 10;
-    if (speedN > 0.5) {
-      scores.DRILLBIT += speedN * 18;
-    } else {
-      scores.DRILLBIT -= 5;
-    }
-    if (capeN >= 0.2) scores.DRILLBIT += capeN * 4;
-    if (mid_dry) scores.DRILLBIT += rhMidN * 6;
-
-    if (capeN >= 0.25) scores.CONE += capeN * 16;
-    else scores.CONE -= 4;
-    if (srhN > 0.2) scores.CONE += srhN * 6;
-    if (pwatN >= 0.2 && pwatN <= 0.65) scores.CONE += pwatN * 8;
-    else if (pwatN > 0.65) scores.CONE -= 3;
-    if (cape3kmN > 0.25) scores.CONE += cape3kmN * 3;
-
-    if (capeN <= 0.2) scores.ROPE += 22;
-    if (capeN <= 0.08) scores.ROPE += 14;
-    if (speedN <= 0.35) scores.ROPE += 12;
-    if (pwatN < 0.2) scores.ROPE += 8;
-
-    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k]); });
-
-    // Use combined CAPE and SRH for overall tornado favorability
-    const severityMultiplier = 0.9 + ((capeN + srhN) / 2 * 0.6);
-    Object.keys(scores).forEach(k => { scores[k] = Math.max(1, scores[k] * severityMultiplier); });
-
-    const total = Object.values(scores).reduce((a,b) => a + b, 0) || 1;
-    const percentages = Object.keys(scores).map(k => ({ Type: k, Prob: Math.round((scores[k] / total) * 1000) / 10 }));
-    const types = percentages.sort((a,b) => b.Prob - a.Prob);
-
-    let multiVortexChance = Math.round(clamp(srhN * 0.7 + capeN * 0.3, 0, 1) * 100);
-    multiVortexChance = Math.max(1, Math.min(95, multiVortexChance));
-
-    let rainwrappedChance = Math.round(clamp(pwatN * 0.68 + rhN * 0.32, 0, 1) * 100);
-    rainwrappedChance = Math.max(1, Math.min(95, rainwrappedChance));
-
-    let longTrackChance = Math.round(clamp(capeN * 0.6 + speedN * 0.4 + srhN * 0.1, 0, 1) * 100);
-    longTrackChance = Math.max(1, Math.min(95, longTrackChance));
-
-    return {
-      types: types,
-      factors: [
-        { name: 'Multivortex', chance: multiVortexChance },
-        { name: 'Rainwrapped', chance: rainwrappedChance },
-        { name: 'Long-track', chance: longTrackChance }
-      ]
-    };
-  }
-
-  function estimate_wind(data) {
-    const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
-
-    const MAX = { CAPE: 10226, SRH: 1000, LAPSE: 12, SPEED: 120 };
-
-    const capeN = clamp((data.CAPE || 0) / MAX.CAPE);
-    const srhN = clamp((data.SRH || 0) / MAX.SRH);
-    const lapseN = clamp(((data.LAPSE_RATE_0_3 || 1) - 1) / (MAX.LAPSE - 1));
-    const speedN = clamp((data.STORM_SPEED || 0) / MAX.SPEED);
-
-    // Rebalanced weights without VTP and STP
-    const w = { cape: 0.45, srh: 0.35, lapse: 0.12, speed: 0.08 };
-
-    let severity = capeN * w.cape + srhN * w.srh + lapseN * w.lapse + speedN * w.speed;
-    
-    // Apply non-linear scaling: boost mid-to-high values more aggressively
-    // This makes moderate parameters produce stronger winds
-    severity = Math.pow(severity, 0.75); // power < 1 shifts distribution upward
-    severity = clamp(severity, 0, 1.5); // allow exceeding 1.0 for extreme cases
-
-    // Wider, more realistic wind speed range
-    const MIN_BASE = 75;   // start higher (weak tornadoes still ~EF0-1)
-    const MAX_BASE = 320;  // realistic upper bound for EF5
-    
-    // Center estimate now uses extended severity range
-    const center = Math.round(MIN_BASE + severity * (MAX_BASE - MIN_BASE));
-    // Wider uncertainty spread for higher intensities
-    const spread = Math.round(30 + severity * 90);
-
-    const est_min = Math.max(20, center - Math.round(spread * 0.6));
-    const est_max = Math.min(MAX_BASE, center + Math.round(spread * 0.6));
-
-    let label = 'EF0-1';
-    const mid = (est_min + est_max) / 2;
-    if (mid >= 200) label = 'EF4/EF5';
-    else if (mid >= 165) label = 'EF4';
-    else if (mid >= 135) label = 'EF3';
-    else if (mid >= 111) label = 'EF2';
-    else if (mid >= 86) label = 'EF1';
-    else label = 'EF0 (landspout)';
-
-    // Calculate theoretical maximum if conditions are extreme
-    // Lowered thresholds: CAPE > 7000 AND SRH > 650
-    let theoretical = null;
-    if (severity > 1.1 || (data.CAPE > 7000 && data.SRH > 650)) {
-      const theo_min = est_max;
-      const theo_max = Math.min(550, Math.round(est_max * 1.4 + 50));
-      theoretical = { theo_min, theo_max };
-    }
-
-    return { est_min, est_max, label, theoretical };
-  }
-
-  function populateSummary(data) {
-    sum.TEMP && (sum.TEMP.textContent = data.TEMP ? String(data.TEMP) : '—');
-    sum.DEW && (sum.DEW.textContent = data.DEWPOINT ? String(data.DEWPOINT) : '—');
-    sum.CAPE && (sum.CAPE.textContent = data.CAPE ? String(data.CAPE) : '—');
-    sum.LAPSE && (sum.LAPSE.textContent = data.LAPSE_RATE_0_3 ? String(data.LAPSE_RATE_0_3) : '—');
-    sum.PWAT && (sum.PWAT.textContent = data.PWAT ? String(data.PWAT) : '—');
-    sum.RH && (sum.RH.textContent = data.SURFACE_RH ? String(data.SURFACE_RH) : '—');
-    sum.SRH && (sum.SRH.textContent = data.SRH ? String(data.SRH) : '—');
-
-    const sum3CAPE = document.getElementById('sum_3CAPE');
-    const sum36LAPSE = document.getElementById('sum_36LAPSE');
-    const sum700RH = document.getElementById('sum_700RH');
-    if (sum3CAPE) sum3CAPE.textContent = data.CAPE_3KM ? String(data.CAPE_3KM) : '—';
-    if (sum36LAPSE) sum36LAPSE.textContent = data.LAPSE_3_6KM ? String(data.LAPSE_3_6KM) : '—';
-    if (sum700RH) sum700RH.textContent = data.RH_MID ? String(data.RH_MID) : '—';
-  }
-
+  // ============================================================================
+  // CHART.JS PLUGIN REGISTRATION
+  // ============================================================================
+  
+  /**
+   * Register ChartDataLabels plugin with Chart.js
+   * Ensures plugin is loaded before attempting registration
+   */
   function tryRegisterDataLabels() {
-    try {
-      if (window.Chart && window.ChartDataLabels && !Chart.registry.getPlugin('datalabels')) {
-        Chart.register(ChartDataLabels);
-      }
-    } catch (e) {
-      console.warn('datalabels plugin not available', e);
-    }
-  }
-
-  function colorForValue(value) {
-    const stops = [
-      {v:0, c:[30,136,229]},
-      {v:25, c:[38,198,218]},
-      {v:50, c:[102,187,106]},
-      {v:75, c:[255,167,38]},
-      {v:100, c:[239,83,80]}
-    ];
-    const pct = Math.max(0, Math.min(100, value));
-    for (let i=0;i<stops.length-1;i++){
-      const a=stops[i], b=stops[i+1];
-      if (pct >= a.v && pct <= b.v) {
-        const t = (pct - a.v) / (b.v - a.v);
-        const r = Math.round(a.c[0] + (b.c[0] - a.c[0]) * t);
-        const g = Math.round(a.c[1] + (b.c[1] - a.c[1]) * t);
-        const bl = Math.round(a.c[2] + (b.c[2] - a.c[2]) * t);
-        return `rgb(${r},${g},${bl})`;
-      }
-    }
-    return '#ffffff';
-  }
-
-  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-    if (w < 2*r) r = w/2;
-    if (h < 2*r) r = h/2;
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  }
-
-  function drawMiniWind(estimate) {
-    if (!miniCanvas) return;
-    const ctx = miniCanvas.getContext('2d');
-    const DPR = Math.max(1, window.devicePixelRatio || 1);
-    const cw = miniCanvas.clientWidth || 300;
-    const ch = 48;
-    miniCanvas.width = Math.round(cw * DPR);
-    miniCanvas.height = Math.round(ch * DPR);
-
-    ctx.clearRect(0,0,miniCanvas.width, miniCanvas.height);
-    ctx.save();
-    ctx.scale(DPR, DPR);
-
-    const ranges = [
-      {start: 0, end: 65, color: '#ffffff'},
-      {start: 65, end: 110, color: '#4caf50'},
-      {start: 110, end: 135, color: '#ffeb3b'},
-      {start: 135, end: 165, color: '#ff9800'},
-      {start: 165, end: 200, color: '#e53935'},
-      {start: 200, end: 350, color: '#ec407a'}
-    ];
-    const minX = 0, maxX = 350;
-    const pad = 6;
-    const W = cw - pad*2;
-    const H = ch;
-    function xFor(v){ return pad + (v-minX)/(maxX-minX) * W; }
-
-    // Draw "WIND SPEED RANGE (MPH)" label above the bar
-    ctx.fillStyle = '#9aa3ad';
-    ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.letterSpacing = '0.5px';
-    ctx.fillText('WIND SPEED RANGE (MPH)', cw / 2, 8);
-
-    ranges.forEach(r => {
-      const x1 = xFor(r.start), x2 = xFor(r.end);
-      const w = Math.max(2, x2 - x1);
-      ctx.fillStyle = r.color;
-      roundRect(ctx, x1, (H/2)+2, w, 16, 3, true, false);
-    });
-
-    if (estimate && typeof estimate.est_min === 'number' && typeof estimate.est_max === 'number') {
-      const estMin = Math.max(minX, Math.min(maxX, estimate.est_min));
-      const estMax = Math.max(minX, Math.min(maxX, estimate.est_max));
-      const xMin = xFor(estMin);
-      const xMax = xFor(estMax);
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(xMin, (H/2)+10);
-      ctx.lineTo(xMax, (H/2)+10);
-      ctx.stroke();
-
-      const cx = (xMin + xMax) / 2;
-      const cy = (H/2)+10;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      const s = 6;
-      ctx.moveTo(cx, cy - s/2);
-      ctx.lineTo(cx + s/2, cy);
-      ctx.lineTo(cx, cy + s/2);
-      ctx.lineTo(cx - s/2, cy);
-      ctx.closePath();
-      ctx.fill();
-
-      // Draw numbers with dark background for better readability
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Measure text to create background boxes
-      const minText = `${estimate.est_min}`;
-      const maxText = `${estimate.est_max}`;
-      const minMetrics = ctx.measureText(minText);
-      const maxMetrics = ctx.measureText(maxText);
-      
-      const bgPadding = 4;
-      const bgHeight = 16;
-      
-      // Draw background for min value
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      roundRect(ctx, xMin - (minMetrics.width / 2) - bgPadding, H - 12, 
-                minMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
-      
-      // Draw min value text
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(minText, xMin, H - 4);
-      
-      // Draw background for max value
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      roundRect(ctx, xMax - (maxMetrics.width / 2) - bgPadding, H - 12,
-                maxMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
-      
-      // Draw max value text
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(maxText, xMax, H - 4);
+    if (window.ChartRenderer && typeof window.Chart !== 'undefined') {
+      window.ChartRenderer.tryRegisterDataLabels();
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      roundRect(ctx, pad, (H/2)+2, W, 16, 3, true, false);
+      console.warn('[Script] ChartRenderer or Chart.js not loaded yet');
     }
-
-    ctx.restore();
   }
 
+  /**
+   * Get color for probability value (gradient from blue to red)
+   * @param {number} value - Probability percentage (0-100)
+   * @returns {string} RGB color string
+   */
+  function colorForValue(value) {
+    return window.ChartRenderer ? window.ChartRenderer.colorForValue(value) : '#ffffff';
+  }
+
+  // ============================================================================
+  // CUSTOM CHART PLUGINS
+  // ============================================================================
+  
+  /**
+   * Custom Chart.js plugin to draw percentage labels on bars
+   * Displays percentage values directly on the chart bars
+   */
   const drawPercentPlugin = {
     id: 'drawPercentPlugin',
     afterDatasetsDraw(chart) {
@@ -508,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const value = dataset.data[index];
           if (value == null) return;
 
+          // Get bar position (supports both vertical and horizontal bars)
           const barX = (bar.x !== undefined) ? bar.x : (bar.getProps ? bar.getProps(['x'], true).x : 0);
           const barY = (bar.y !== undefined) ? bar.y : (bar.getProps ? bar.getProps(['y'], true).y : 0);
 
@@ -515,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const labelX = isHorizontal ? barX + 10 : barX;
           const labelY = isHorizontal ? barY : barY - 8;
 
+          // Draw percentage text
           ctx.save();
           ctx.fillStyle = '#ffffff';
           ctx.font = '700 14px Inter, sans-serif';
@@ -527,12 +241,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // ============================================================================
+  // PERCENTAGE COLUMN RENDERING
+  // ============================================================================
+  
+  /**
+   * Clear all percentage items from the column
+   */
   function clearPercentColumn() {
     const pc = ensurePercentColumn();
     if (!pc) return;
     pc.innerHTML = '';
   }
 
+  /**
+   * Update percentage column with current chart values
+   * Positions percentage labels aligned with chart bars
+   * @param {Array<number>} values - Array of probability percentages
+   * @param {Array<string>} labels - Array of tornado type labels
+   */
   function updatePercentColumn(values, labels) {
     const pc = ensurePercentColumn();
     if (!pc || !probChart) return;
@@ -546,14 +273,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const value = values[idx];
       if (value == null) return;
 
+      // Create percentage label element
       const item = document.createElement('div');
       item.className = 'percent-item';
       
+      // Format number (1 decimal if needed, integer if whole number)
       const n = Math.round(value * 10) / 10;
       item.textContent = (Number.isInteger(n) ? n : n.toFixed(1)) + '%';
       
       pc.appendChild(item);
 
+      // Calculate vertical position to align with bar center
       let barCenterY = bar.y !== undefined ? bar.y : (bar.height !== undefined ? bar.y + bar.height / 2 : 0);
 
       const canvasHeight = probCanvas.height || 300;
@@ -563,8 +293,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ============================================================================
+  // EMPTY CHART RENDERING
+  // ============================================================================
+  
+  /**
+   * Render empty placeholder chart when no data is available
+   * Shows "No data" placeholder
+   */
   function renderEmptyProb() {
+    // Ensure Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+      console.warn('[Script] Chart.js not loaded, delaying empty chart render');
+      setTimeout(renderEmptyProb, 100);
+      return;
+    }
+    
     tryRegisterDataLabels();
+    
+    // Set canvas size with device pixel ratio for crisp rendering
     const DPR = Math.max(1, window.devicePixelRatio || 1);
     const clientW = probCanvas.clientWidth || 800;
     const clientH = Math.max(260, probCanvas.parentElement.clientHeight || 360);
@@ -572,11 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
     probCanvas.height = Math.round(clientH * DPR);
 
     const ctx = probCanvas.getContext('2d');
+    
+    // Destroy existing chart if present
     if (probChart) {
       probChart.destroy();
       probChart = null;
     }
 
+    // Create empty chart configuration
     const chartOptions = {
       type: 'bar',
       data: {
@@ -589,15 +339,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }]
       },
       options: {
-        indexAxis: 'y',
+        indexAxis: 'y',                    // Horizontal bars
         responsive: false,
         maintainAspectRatio: false,
         animation: false,
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { right: 40 } },
         scales: {
-          x: { max: 100, ticks: { display: true, color: '#bfcbd8', stepSize: 25 }, grid: { color: 'rgba(255,255,255,0.03)' } },
-          y: { ticks: { color: '#dfe9f2', font: { weight: 700 } }, grid: { display: false } }
+          x: { 
+            max: 100, 
+            ticks: { display: true, color: '#bfcbd8', stepSize: 25 }, 
+            grid: { color: 'rgba(255,255,255,0.03)' } 
+          },
+          y: { 
+            ticks: { color: '#dfe9f2', font: { weight: 700 } }, 
+            grid: { display: false } 
+          }
         },
         plugins: {
           legend: { display: false },
@@ -612,17 +369,38 @@ document.addEventListener('DOMContentLoaded', () => {
     probCanvas.style.pointerEvents = 'auto';
   }
 
+  // ============================================================================
+  // PROBABILITY CHART RENDERING
+  // ============================================================================
+  
+  /**
+   * Render probability distribution chart with tornado type data
+   * Creates horizontal bar chart showing likelihood of each tornado type
+   * @param {Array<Object>} dataArr - Array of {Type, Prob} objects
+   */
   function renderProbChart(dataArr) {
+    // Ensure Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+      console.warn('[Script] Chart.js not loaded, delaying chart render');
+      setTimeout(() => renderProbChart(dataArr), 100);
+      return;
+    }
+    
     tryRegisterDataLabels();
 
+    // Extract labels and values
     const labels = dataArr.map(d => d.Type);
     const values = dataArr.map(d => d.Prob);
+    
     if (!values.length) {
       renderEmptyProb();
       return;
     }
+    
+    // Generate gradient colors based on probability values
     const bgColors = values.map(v => colorForValue(v));
 
+    // Set canvas size with device pixel ratio
     const DPR = Math.max(1, window.devicePixelRatio || 1);
     const clientW = probCanvas.clientWidth || 800;
     const clientH = Math.max(260, probCanvas.parentElement.clientHeight || 360);
@@ -632,17 +410,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = probCanvas.getContext('2d');
     const safeMax = 100;
 
+    // Register plugins
     const plugins = [];
     if (window.ChartDataLabels) {
-      try {
-        if (!Chart.registry.getPlugin('datalabels')) Chart.register(ChartDataLabels);
-        plugins.push(ChartDataLabels);
-      } catch (e) {
-        console.warn('Could not register ChartDataLabels plugin, using fallback', e);
-      }
+      plugins.push(ChartDataLabels);
     }
     plugins.push(drawPercentPlugin);
 
+    // Update existing chart if present
     if (probChart) {
       probChart.options.scales.x.max = safeMax;
       probChart.data.labels = labels;
@@ -655,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Create new chart
     const chartOptions = {
       type: 'bar',
       data: {
@@ -670,19 +446,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }]
       },
       options: {
-        indexAxis: 'y',
+        indexAxis: 'y',                    // Horizontal bars
         responsive: false,
         maintainAspectRatio: false,
         animation: { duration: 0 },
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { right: 40 } },
         scales: {
-          x: { max: safeMax, ticks: { color: '#bfcbd8', stepSize: 25 }, grid: { color: 'rgba(255,255,255,0.03)' } },
-          y: { ticks: { color: '#dfe9f2', font: { weight: 700 } }, grid: { display: false } }
+          x: { 
+            max: safeMax, 
+            ticks: { color: '#bfcbd8', stepSize: 25 }, 
+            grid: { color: 'rgba(255,255,255,0.03)' } 
+          },
+          y: { 
+            ticks: { color: '#dfe9f2', font: { weight: 700 } }, 
+            grid: { display: false } 
+          }
         },
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: false },
+          tooltip: { enabled: false },      // Custom tooltip handled separately
           datalabels: {
             anchor: 'end',
             align: 'start',
@@ -707,6 +490,14 @@ document.addEventListener('DOMContentLoaded', () => {
     probCanvas.style.pointerEvents = 'auto';
   }
 
+  // ============================================================================
+  // CHART TOOLTIP SETUP
+  // ============================================================================
+  
+  /**
+   * Setup custom tooltip for probability chart
+   * Shows tornado type descriptions on hover
+   */
   function setupChartTooltip() {
     if (!probChart || !probChart.canvas) return;
     
@@ -715,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const canvas = probChart.canvas;
 
+    // Remove existing listeners
     if (canvas._chartMouseMove) {
       canvas.removeEventListener('mousemove', canvas._chartMouseMove);
     }
@@ -722,7 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
       canvas.removeEventListener('mouseleave', canvas._chartMouseLeave);
     }
     
+    /**
+     * Handle mouse movement over chart
+     * Detect which bar is hovered and show tooltip
+     */
     function handleChartMouseMove(e) {
+      // Don't override thermo tooltips
       if (tooltip.dataset.source === 'thermo') return;
 
       const rect = canvas.getBoundingClientRect();
@@ -731,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const meta = probChart.getDatasetMeta(0);
       if (!meta || !meta.data || !meta.data.length) return;
 
+      // Find hovered bar
       let hoveredType = null;
       meta.data.forEach((datapoint, idx) => {
         if (datapoint && typeof datapoint.y === 'number') {
@@ -741,11 +539,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
+      // Show tooltip if tornado type found
       if (hoveredType && tornadoDescriptions[hoveredType]) {
         tooltip.innerHTML = `<strong>${hoveredType}</strong><br>${tornadoDescriptions[hoveredType]}`;
         tooltip.classList.add('visible');
         tooltip.setAttribute('aria-hidden', 'false');
         tooltip.dataset.source = 'chart';
+        
         // Position near cursor using fixed positioning
         const left = Math.min(window.innerWidth - 300, Math.max(8, e.clientX + 12));
         const top = Math.min(window.innerHeight - 120, Math.max(8, e.clientY + 12));
@@ -760,6 +560,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    /**
+     * Handle mouse leaving chart area
+     * Hide tooltip when mouse leaves
+     */
     function handleChartMouseLeave() {
       if (tooltip.dataset.source === 'chart') {
         tooltip.classList.remove('visible');
@@ -768,16 +572,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Store listeners for cleanup
     canvas._chartMouseMove = handleChartMouseMove;
     canvas._chartMouseLeave = handleChartMouseLeave;
 
+    // Attach event listeners
     canvas.addEventListener('mousemove', canvas._chartMouseMove);
     canvas.addEventListener('mouseleave', canvas._chartMouseLeave);
   }
 
+  // ============================================================================
+  // AUTO-ANALYSIS SYSTEM
+  // ============================================================================
+  
   let autoAnalysisTimer = null;
-  const AUTO_ANALYSIS_DELAY = 500;
+  const AUTO_ANALYSIS_DELAY = 500;    // Wait 500ms after last input before auto-analyzing
 
+  /**
+   * Trigger auto-analysis with debounce
+   * Prevents excessive calculations while user is typing
+   */
   function triggerAutoAnalysis() {
     clearTimeout(autoAnalysisTimer);
     autoAnalysisTimer = setTimeout(() => {
@@ -785,18 +599,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }, AUTO_ANALYSIS_DELAY);
   }
 
+  /**
+   * Perform complete tornado analysis
+   * - Reads inputs
+   * - Updates summary
+   * - Calculates probabilities
+   * - Renders charts
+   * - Estimates wind speeds
+   */
   function performAnalysis() {
     const data = readInputs();
     populateSummary(data);
-    const result = calculate_probabilities(data);
+    
+    // Check if calculation modules are loaded
+    if (!window.TornadoCalculations || !window.ChartRenderer) {
+      console.warn('[Analysis] Required modules not loaded yet, retrying in 500ms...');
+      setTimeout(() => performAnalysis(), 500);
+      return;
+    }
+    
+    // Calculate tornado probabilities
+    const result = window.TornadoCalculations.calculate_probabilities(data);
     renderProbChart(result.types);
     renderSpecialFactors(result.factors);
-    const estimate = estimate_wind(data);
-    drawMiniWind(data.CAPE > 0 ? estimate : null);
+    
+    // Estimate wind speeds
+    const estimate = window.TornadoCalculations.estimate_wind(data);
+    drawMiniWind(miniCanvas, data.CAPE > 0 ? estimate : null);
+    
+    // Update EF-scale label
     if (data.CAPE > 0) windLabel.textContent = estimate.label;
     else windLabel.textContent = 'No estimate yet';
     
-    // Display theoretical wind estimate if available
+    // Show/hide theoretical wind estimate for extreme conditions
     const theoreticalDiv = document.getElementById('theoreticalWind');
     if (theoreticalDiv && estimate.theoretical) {
       theoreticalDiv.style.display = 'block';
@@ -805,23 +640,36 @@ document.addEventListener('DOMContentLoaded', () => {
       theoreticalDiv.style.display = 'none';
     }
     
-    // Show/hide wind estimate disclaimer
+    // Show/hide wind disclaimer
     const windDisclaimerDiv = document.getElementById('windDisclaimer');
     if (windDisclaimerDiv) {
       windDisclaimerDiv.style.display = data.CAPE > 0 ? 'block' : 'none';
     }
   }
 
+  // ============================================================================
+  // SPECIAL FACTORS RENDERING
+  // ============================================================================
+  
   const thermoCard = document.querySelector('.thermo-card');
   const specialFactorsContainer = thermoCard.querySelector('#specialFactors');
 
+  /**
+   * Render special tornado factors (rain-wrap, hail, etc.)
+   * Shows additional hazards and probabilities
+   * @param {Array<Object>} factors - Array of {name, chance} objects
+   */
   function renderSpecialFactors(factors) {
     if (!specialFactorsContainer) return;
     specialFactorsContainer.innerHTML = '<strong>Special Tornado Factors:</strong><br>' +
       factors.map(f => `${f.name}: <span style="color:#fff;font-weight:700">${f.chance}%</span>`).join('<br>');
   }
 
-  // Auto-analyze on input changes
+  // ============================================================================
+  // EVENT LISTENERS - AUTO-ANALYSIS
+  // ============================================================================
+  
+  // Auto-analyze when any input changes
   ids.forEach(id => {
     const el = get(id);
     if (el) {
@@ -830,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Auto-analyze for additional parameters
   ['CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'].forEach(id => {
     const el = get(id);
     if (el) {
@@ -838,15 +687,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ============================================================================
+  // EVENT LISTENERS - BUTTONS
+  // ============================================================================
+  
+  /**
+   * Analyze button click handler
+   * Manually trigger analysis
+   */
   if (analyzeBtn) {
     analyzeBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      console.log('[Analysis] Analyze button clicked');
       performAnalysis();
     });
   }
 
+  /**
+   * Reset button click handler
+   * Clear all inputs and reset visualizations
+   */
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
+      console.log('[Reset] Reset button clicked');
+      
+      // Clear all form inputs
       ids.forEach(k => {
         const el = get(k);
         if (el) el.value = '';
@@ -855,93 +720,247 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = get(k);
         if (el) el.value = '';
       });
+      
+      // Reset summary displays
       Object.values(sum).forEach(el => {
         if (el) el.textContent = '—';
       });
+      
+      const sum3CAPE = document.getElementById('sum_3CAPE');
+      const sum36LAPSE = document.getElementById('sum_36LAPSE');
+      const sum700RH = document.getElementById('sum_700RH');
+      if (sum3CAPE) sum3CAPE.textContent = '—';
+      if (sum36LAPSE) sum36LAPSE.textContent = '—';
+      if (sum700RH) sum700RH.textContent = '—';
+      
+      // Reset visualizations
       renderEmptyProb();
-      drawMiniWind(null);
+      drawMiniWind(miniCanvas, null);
       windLabel.textContent = 'No estimate yet';
       if (specialFactorsContainer) specialFactorsContainer.innerHTML = '';
       
-      // Hide disclaimers on reset
+      // Hide all disclaimers and warnings
       const theoreticalDiv = document.getElementById('theoreticalWind');
       const windDisclaimerDiv = document.getElementById('windDisclaimer');
+      const warningDiv = document.getElementById('validationWarnings');
       if (theoreticalDiv) theoreticalDiv.style.display = 'none';
       if (windDisclaimerDiv) windDisclaimerDiv.style.display = 'none';
+      if (warningDiv) warningDiv.style.display = 'none';
     });
   }
 
+  // ============================================================================
+  // EVENT LISTENERS - EXPORT PNG
+  // ============================================================================
+  
+  /**
+   * Export button click handler
+   * Captures charts and exports to PNG
+   */
   if (exportBtn) {
-    exportBtn.addEventListener('click', async () => {
+    exportBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      console.log('[Export] Export button clicked');
+      
       try {
+        // Check if html2canvas library is loaded
         if (typeof html2canvas === 'undefined') {
+          console.warn('[Export] html2canvas not loaded yet, loading now...');
+          alert('Export library is still loading. Please wait a moment and try again.');
+          
+          // Dynamically load html2canvas if not present
           const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-          script.onload = () => exportToImage();
+          script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+          script.onload = () => {
+            console.log('[Export] html2canvas loaded successfully');
+            alert('Export library loaded! Please click Export PNG again.');
+          };
+          script.onerror = () => {
+            console.error('[Export] Failed to load html2canvas');
+            alert('Failed to load export library. Please check your internet connection.');
+          };
           document.head.appendChild(script);
-        } else {
-          await exportToImage();
+          return;
         }
-      } catch (err) {
-        console.error('Export failed:', err);
-        alert('Export failed. Please try again.');
+        
+        console.log('[Export] Starting PNG export...');
+        await exportToPNG();
+        console.log('[Export] PNG export completed');
+      } catch (error) {
+        console.error('[Export] Export failed:', error);
+        alert(`Failed to export PNG: ${error.message}`);
       }
     });
+  } else {
+    console.error('[Export] Export button not found');
   }
 
-  async function exportToImage() {
-    const rightCol = document.querySelector('.right-col');
-    if (!rightCol || typeof html2canvas === 'undefined') {
-      alert('Unable to export. Please ensure all content is loaded.');
-      return;
+  /**
+   * Export visualization to PNG file
+   * Captures thermodynamics and probability charts, combines them vertically
+   */
+  async function exportToPNG() {
+    console.log('[Export] exportToPNG function called');
+    
+    const thermoCard = document.querySelector('.thermo-card');
+    const probCard = document.querySelector('.prob-card');
+    
+    if (!thermoCard || !probCard) {
+      console.error('[Export] Cannot find thermo or prob card');
+      throw new Error('Cannot find chart elements');
     }
-    try {
-      const canvas = await html2canvas(rightCol, {
-        backgroundColor: '#121212',
-        scale: 2,
-        logging: false,
-        useCORS: true
-      });
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `twisted-weather-analysis-${Date.now()}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-      });
-    } catch (err) {
-      console.error('Export error:', err);
-      alert('Export failed. Please try again.');
-    }
+    
+    // Capture thermodynamics card
+    console.log('[Export] Capturing thermodynamics card...');
+    const thermoCanvas = await html2canvas(thermoCard, {
+      backgroundColor: '#121212',
+      scale: 2,                          // 2x resolution for quality
+      logging: true,
+      allowTaint: true,
+      useCORS: true
+    });
+    
+    // Capture probability card
+    console.log('[Export] Capturing probability card...');
+    const probCanvas = await html2canvas(probCard, {
+      backgroundColor: '#121212',
+      scale: 2,
+      logging: true,
+      allowTaint: true,
+      useCORS: true
+    });
+    
+    // Combine canvases vertically
+    console.log('[Export] Combining canvases...');
+    const combined = document.createElement('canvas');
+    const ctx = combined.getContext('2d');
+    
+    combined.width = Math.max(thermoCanvas.width, probCanvas.width);
+    combined.height = thermoCanvas.height + probCanvas.height + 40;  // 40px spacing
+    
+    // Fill background
+    ctx.fillStyle = '#121212';
+    ctx.fillRect(0, 0, combined.width, combined.height);
+    
+    // Draw both canvases
+    ctx.drawImage(thermoCanvas, 0, 0);
+    ctx.drawImage(probCanvas, 0, thermoCanvas.height + 40);
+    
+    // Create download link
+    console.log('[Export] Creating download link...');
+    combined.toBlob(blob => {
+      if (!blob) {
+        console.error('[Export] Failed to create blob');
+        alert('Failed to create image blob');
+        return;
+      }
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `twisted-analysis-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('[Export] Download triggered successfully');
+      alert('PNG exported successfully!');
+    }, 'image/png');
   }
 
-  renderEmptyProb();
-  drawMiniWind(null);
+  // ============================================================================
+  // INITIALIZATION
+  // ============================================================================
+  
+  /**
+   * Initialize the application
+   * - Render empty chart
+   * - Setup initial wind visualization
+   * - Check for required modules
+   */
+  function init() {
+    console.log('Twisted Weather Analyzer initialized');
+    
+    // Check module loading status after delay
+    setTimeout(() => {
+      console.log('Modules loaded:', {
+        TornadoCalculations: !!window.TornadoCalculations,
+        ChartRenderer: !!window.ChartRenderer,
+        ThermoExtractor: !!window.ThermoExtractor,
+        HodographCore: !!window.HodographCore,
+        HodographUI: !!window.HodographUI,
+        Chart: typeof Chart !== 'undefined',
+        ChartDataLabels: typeof ChartDataLabels !== 'undefined'
+      });
+    }, 1000);
+  }
+
+  // Initial render
+  if (typeof Chart !== 'undefined') {
+    renderEmptyProb();
+  } else {
+    console.log('[Script] Waiting for Chart.js to load...');
+    setTimeout(() => {
+      if (typeof Chart !== 'undefined') {
+        renderEmptyProb();
+      } else {
+        console.error('[Script] Chart.js failed to load after timeout');
+      }
+    }, 1000);
+  }
+  
+  drawMiniWind(miniCanvas, null);
   if (windLabel) windLabel.textContent = 'No estimate yet';
 
+  // ============================================================================
+  // WINDOW RESIZE HANDLER
+  // ============================================================================
+  
+  /**
+   * Handle window resize events
+   * Re-render charts with proper dimensions
+   */
   let resizeTimer = null;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      // Re-render probability chart
       if (probChart) {
-        const data = probChart.data.labels.map((l, i) => ({Type: l, Prob: probChart.data.datasets[0].data[i]}));
+        const data = probChart.data.labels.map((l, i) => ({
+          Type: l, 
+          Prob: probChart.data.datasets[0].data[i]
+        }));
         renderProbChart(data);
       } else {
         renderEmptyProb();
       }
+      
+      // Re-render wind visualization
       const currentData = readInputs();
-      const estimate = estimate_wind(currentData);
-      drawMiniWind(currentData.CAPE > 0 ? estimate : null);
+      const estimate = window.TornadoCalculations ? 
+        window.TornadoCalculations.estimate_wind(currentData) : null;
+      if (estimate) drawMiniWind(miniCanvas, currentData.CAPE > 0 ? estimate : null);
     }, 150);
   });
 
-  console.log('Twisted Weather Analyzer initialized');
-
+  // ============================================================================
+  // THERMODYNAMICS TOOLTIP SETUP
+  // ============================================================================
+  
+  /**
+   * Setup tooltips for thermodynamics statistics
+   * Shows parameter descriptions on hover
+   */
   (function setupThermoTooltips(){
     const tooltip = document.getElementById('statTooltip');
     if (!tooltip) return;
+    
     const labels = document.querySelectorAll('.thermo-card .k[data-desc]');
+    
+    /**
+     * Show tooltip with parameter description
+     */
     function showTip(e){
       const el = e.currentTarget;
       const desc = el.getAttribute('data-desc') || '';
@@ -951,26 +970,38 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip.dataset.source = 'thermo';
       positionTip(e);
     }
+    
+    /**
+     * Position tooltip near label
+     */
     function positionTip(e){
-      // Use fixed positioning near the label
       const rect = e.currentTarget.getBoundingClientRect();
       const left = Math.min(window.innerWidth - 300, Math.max(8, rect.left + 8));
       const top = Math.min(window.innerHeight - 120, rect.bottom + 6);
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
     }
+    
+    /**
+     * Move tooltip with cursor
+     */
     function moveTip(e){
-      // Position near cursor
       const left = Math.min(window.innerWidth - 300, Math.max(8, e.clientX + 8));
       const top = Math.min(window.innerHeight - 120, Math.max(8, e.clientY + 12));
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
     }
+    
+    /**
+     * Hide tooltip
+     */
     function hideTip(){
       tooltip.classList.remove('visible');
       tooltip.setAttribute('aria-hidden','true');
       delete tooltip.dataset.source;
     }
+    
+    // Attach event listeners to all stat labels
     labels.forEach(lbl => {
       lbl.addEventListener('mouseenter', showTip);
       lbl.addEventListener('mousemove', moveTip);
@@ -978,6 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
       lbl.addEventListener('focus', showTip);
       lbl.addEventListener('blur', hideTip);
     });
+    
+    // Hide tooltip on scroll/resize
     window.addEventListener('scroll', hideTip, true);
     window.addEventListener('resize', hideTip);
   })();

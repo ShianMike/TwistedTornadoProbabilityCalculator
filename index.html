@@ -3,14 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Twisted Weather Analyzer</title>
+  <title>Twisted Wind & Tornado Predictor</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="tornado-calculations.js" defer></script>
+  <script src="chart-renderer.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -30,7 +32,7 @@
             <div class="input-panel">
               <div class="input-row">
                 <label for="TEMP" class="label-title">Temperature (F)</label>
-                <input id="TEMP" type="number" step="0.1" min="-50" max="140" placeholder="">
+                <input id="TEMP" type="number" step="0.1" min="-50" max="140" placeholder="" autocomplete="off">
               </div>
               <div class="input-row">
                 <label for="CAPE" class="label-title">CAPE (J/kg)</label>
@@ -42,7 +44,7 @@
               </div>
               <div class="input-row">
                 <label for="PWAT" class="label-title">PWAT (in)</label>
-                <input id="PWAT" type="number" step="0.01" min="0" max="3.5" placeholder="">
+                <input id="PWAT" type="number" step="0.01" min="0" max="2.5" placeholder="" autocomplete="off">
               </div>
               <div class="input-row">
                 <label for="SURFACE_RH" class="label-title">Surface RH (%)</label>
@@ -58,7 +60,7 @@
             <div class="input-panel">
               <div class="input-row">
                 <label for="DEWPOINT" class="label-title">Dewpoint (F)</label>
-                <input id="DEWPOINT" type="number" step="0.1" min="-50" max="120" placeholder="">
+                <input id="DEWPOINT" type="number" step="0.1" min="-50" max="120" placeholder="" autocomplete="off">
               </div>
               <div class="input-row">
                 <label for="CAPE_3KM" class="label-title">3CAPE (J/kg)</label>
@@ -184,6 +186,9 @@
   <footer class="app-footer">
     <p class="disclaimer-text">
       <strong>Disclaimer:</strong> This is a game/simulation tool for the Twisted weather simulation game. Tornado morphology predictions and wind speed estimates are based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction.
+    </p>
+    <p style="font-size: 11px; opacity: 0.5; margin-top: 12px;">
+      <strong>Privacy:</strong> This application runs entirely in your browser. No data is collected, stored, or transmitted. Your inputs and results never leave your device.
     </p>
     <p>Created by: seanmike</p>
   </footer>

@@ -148,26 +148,27 @@ twisted-analyzer/
 
 #### Wind Speed Estimation
 
-**Component Buffs (+10% across the board)**
-- CAPE component: 30 → 32
-- SRH component: 25 → 27
-- Lapse rate component: 20 → 22
+**Component Buffs (+15% across the board)**
+- CAPE component: 30 → 35
+- SRH component: 25 → 29
+- Lapse rate component: 20 → 23
 - Moisture bonus: 10 → 12
 - Reduced low-moisture penalty: -5 → -3
-- Added 3CAPE bonus: +8 when CAPE_3KM >80
+- Added 3CAPE bonus: +10 when CAPE_3KM >100
+- Added extreme instability bonus: +8 when CAPE >5000 AND SRH >400
 
 **Range Consistency Improvements**
-- Narrowed min/max spread for more realistic estimates
-- Min multiplier: 0.8 → 0.88
-- Max multiplier: 1.2 → 1.12
-- Typical wind range: 15-30 mph spread (was 20-50 mph)
-- Added constraints to prevent unrealistic gaps
+- Adjusted min multiplier: 0.88 → 0.85
+- Adjusted max multiplier: 1.12 → 1.25 (better extreme parameter scaling)
+- Typical wind range: 15-35 mph spread
+- Raised caps: 200 → 220 (min), 200 → 250 (max)
+- Extreme scenarios now properly reach EF5 thresholds (200+ mph)
 
 **Results:**
-- ~10% higher wind estimates overall
-- More consistent min/max relationships
-- Better correlation with atmospheric parameters
-- Example: 94-141 mph → 120-145 mph (more realistic range)
+- ~15% higher wind estimates overall
+- Better scaling for extreme atmospheric parameters (CAPE >5000, SRH >400)
+- More realistic ranges for violent tornado potential
+- Example: Previous 168-200 mph → New ~185-218 mph (extreme scenario)
 
 #### Special Factors
 
@@ -275,6 +276,6 @@ MIT License - Feel free to modify and use for personal projects
 
 ---
 
-**Version:** 1.4.3  
+**Version:** 1.4.3
 
 

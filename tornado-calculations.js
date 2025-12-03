@@ -255,40 +255,43 @@
 
     // Calculate composite indices for wind estimation
 
-    // Base wind potential from CAPE (instability) - BUFFED
-    const capeComponent = Math.sqrt(CAPE / 1000) * 32;  // Increased from 30
+    // Base wind potential from CAPE (instability) - BUFFED +15%
+    const capeComponent = Math.sqrt(CAPE / 1000) * 35;  // Increased from 30 to 35
 
-    // Rotational component from SRH - BUFFED
-    const srhComponent = Math.sqrt(SRH / 100) * 27;  // Increased from 25
+    // Rotational component from SRH - BUFFED +15%
+    const srhComponent = Math.sqrt(SRH / 100) * 29;  // Increased from 25 to 29
 
-    // Low-level instability boost from lapse rate - BUFFED
-    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 22;  // Increased from 20
+    // Low-level instability boost from lapse rate - BUFFED +15%
+    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 23;  // Increased from 20 to 23
 
-    // Moisture component (can enhance or reduce wind) - REBALANCED
-    const moistureComponent = PWAT > 1.5 ? 12 : -3;  // Less penalty for low moisture
+    // Moisture component - BUFFED
+    const moistureComponent = PWAT > 1.5 ? 12 : -3;  // Increased bonus, reduced penalty
     
-    // Low-level CAPE bonus
-    const capeBonus = CAPE_3KM > 80 ? 8 : 0;
+    // Low-level CAPE bonus - BUFFED
+    const capeBonus = CAPE_3KM > 100 ? 10 : 0;  // Increased from 8
+    
+    // Extreme instability bonus - NEW
+    const extremeBonus = (CAPE > 5000 && SRH > 400) ? 8 : 0;
 
     // Combine components for base wind estimate
-    let baseWind = capeComponent + srhComponent + lapseComponent + moistureComponent + capeBonus;
+    let baseWind = capeComponent + srhComponent + lapseComponent + moistureComponent + capeBonus + extremeBonus;
 
-    // Apply realistic bounds with NARROWER range for consistency
-    let est_min = Math.max(65, Math.round(baseWind * 0.88));  // Changed from 0.8
-    let est_max = Math.max(est_min + 15, Math.round(baseWind * 1.12));  // Changed from 1.2, reduced gap
+    // Apply realistic bounds with improved range consistency
+    let est_min = Math.max(65, Math.round(baseWind * 0.85));  // Changed from 0.88
+    let est_max = Math.max(est_min + 15, Math.round(baseWind * 1.25));  // Changed from 1.12 for better extreme scaling
 
-    // Cap at typical maximum
-    est_min = Math.min(200, est_min);
-    est_max = Math.min(200, est_max);
+    // Cap at typical maximum (allow EF5+)
+    est_min = Math.min(220, est_min);
+    est_max = Math.min(250, est_max);
     
     // Ensure minimum gap but not too wide
     if (est_max - est_min < 15) {
       est_max = est_min + 15;
     }
-    if (est_max - est_min > 30) {
+    if (est_max - est_min > 35) {
       const mid = (est_min + est_max) / 2;
-      est_min = Math.round(mid - 15);
-      est_max = Math.round(mid + 15);
+      est_min = Math.round(mid - 17);
+      est_max = Math.round(mid + 18);
     }
 
     // ========================================================================

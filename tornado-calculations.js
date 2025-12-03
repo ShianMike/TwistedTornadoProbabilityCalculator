@@ -53,20 +53,14 @@
     // SIDEWINDER PROBABILITY (REBALANCED)
     // Strong rotation + forward speed = long-track rotational tornado
     // ========================================================================
-    if (SRH > 250) scores.SIDEWINDER += 18;
-    if (SRH > 400) scores.SIDEWINDER += 15;
-    if (SRH > 500) scores.SIDEWINDER += 10;  // Very high rotation
-    if (STORM_SPEED > 35) scores.SIDEWINDER += 12;
-    if (STORM_SPEED > 55) scores.SIDEWINDER += 10;
-    if (CAPE > 2000 && CAPE < 5000) scores.SIDEWINDER += 12;
+    if (SRH > 250) scores.SIDEWINDER += 20;
+    if (SRH > 400) scores.SIDEWINDER += 18;
+    if (STORM_SPEED > 35) scores.SIDEWINDER += 15;
+    if (STORM_SPEED > 55) scores.SIDEWINDER += 12;
+    if (CAPE > 2000 && CAPE < 5000) scores.SIDEWINDER += 15;
     if (LAPSE_RATE_0_3 > 8) scores.SIDEWINDER += 10;
-    
-    // Moisture penalty (but not too harsh)
-    if (PWAT > 1.8) scores.SIDEWINDER -= 8;  // Only penalize very high moisture
-    if (SURFACE_RH > 85) scores.SIDEWINDER -= 6;  // Raised threshold
-    
-    // Bonus for ideal conditions (supercell environment)
-    if (SRH > 350 && STORM_SPEED > 40 && CAPE > 2500) scores.SIDEWINDER += 15;
+    if (PWAT < 1.5) scores.SIDEWINDER += 10;
+    if (SURFACE_RH < 75) scores.SIDEWINDER += 8;
 
     // ========================================================================
     // STOVEPIPE PROBABILITY (REBALANCED)

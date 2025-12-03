@@ -23,6 +23,8 @@
     const DEWPOINT = data.DEWPOINT || 0;
     const SURFACE_RH = data.SURFACE_RH || 0;
     const STORM_SPEED = data.STORM_SPEED || 0;
+    const CAPE_3KM = data.CAPE_3KM || 0;
+    const RH_MID = data.RH_MID || 0;
 
     // Calculate derived indices
 
@@ -48,68 +50,107 @@
     };
 
     // ========================================================================
-    // SIDEWINDER PROBABILITY
-    // Favors strong rotation (SRH) and faster storm motion
+    // SIDEWINDER PROBABILITY (REBALANCED)
+    // Strong rotation + forward speed = long-track rotational tornado
     // ========================================================================
-    if (SRH > 200) scores.SIDEWINDER += 25;
+    if (SRH > 250) scores.SIDEWINDER += 18;
     if (SRH > 400) scores.SIDEWINDER += 15;
-    if (STORM_SPEED > 30) scores.SIDEWINDER += 15;
-    if (STORM_SPEED > 50) scores.SIDEWINDER += 10;
-    if (CAPE > 2000 && CAPE < 4000) scores.SIDEWINDER += 10;
+    if (SRH > 500) scores.SIDEWINDER += 10;  // Very high rotation
+    if (STORM_SPEED > 35) scores.SIDEWINDER += 12;
+    if (STORM_SPEED > 55) scores.SIDEWINDER += 10;
+    if (CAPE > 2000 && CAPE < 5000) scores.SIDEWINDER += 12;
     if (LAPSE_RATE_0_3 > 8) scores.SIDEWINDER += 10;
+    
+    // Moisture penalty (but not too harsh)
+    if (PWAT > 1.8) scores.SIDEWINDER -= 8;  // Only penalize very high moisture
+    if (SURFACE_RH > 85) scores.SIDEWINDER -= 6;  // Raised threshold
+    
+    // Bonus for ideal conditions (supercell environment)
+    if (SRH > 350 && STORM_SPEED > 40 && CAPE > 2500) scores.SIDEWINDER += 15;
 
     // ========================================================================
-    // STOVEPIPE PROBABILITY
-    // Requires extreme instability and very high VTP
+    // STOVEPIPE PROBABILITY (REBALANCED)
+    // Extreme instability + tight rotation = violent narrow core
+    // Lowered VTP threshold for more realistic occurrence
     // ========================================================================
-    if (VTP > 2) scores.STOVEPIPE += 30;
-    if (CAPE > 3500) scores.STOVEPIPE += 20;
-    if (SRH > 300) scores.STOVEPIPE += 15;
+    if (VTP > 1.5) scores.STOVEPIPE += 25;  // Lowered from 2
+    if (VTP > 2.5) scores.STOVEPIPE += 20;
+    if (CAPE > 3000) scores.STOVEPIPE += 18;
+    if (CAPE > 4500) scores.STOVEPIPE += 15;
+    if (SRH > 350) scores.STOVEPIPE += 15;
     if (LAPSE_RATE_0_3 > 9) scores.STOVEPIPE += 15;
-    if (DEW_SPREAD < 5) scores.STOVEPIPE += 10;
+    if (DEW_SPREAD < 5) scores.STOVEPIPE += 12;
+    
+    // Needs good but not excessive moisture
+    if (PWAT > 1.0 && PWAT < 1.6) scores.STOVEPIPE += 10;
 
     // ========================================================================
-    // WEDGE PROBABILITY
-    // Favors high moisture, moderate CAPE, and rain-wrapped conditions
+    // WEDGE PROBABILITY (BALANCED)
+    // High moisture + broad circulation + slower motion
     // ========================================================================
-    if (PWAT > 1.5) scores.WEDGE += 25;
-    if (PWAT > 2.0) scores.WEDGE += 15;
-    if (SURFACE_RH > 75) scores.WEDGE += 15;
-    if (CAPE > 1500 && CAPE < 3500) scores.WEDGE += 15;
-    if (STORM_SPEED < 35) scores.WEDGE += 10;
-    if (SRH > 150 && SRH < 400) scores.WEDGE += 10;
+    if (PWAT > 1.5) scores.WEDGE += 22;
+    if (PWAT > 1.8) scores.WEDGE += 20;
+    if (PWAT > 2.1) scores.WEDGE += 15;
+    if (SURFACE_RH > 75) scores.WEDGE += 18;
+    if (SURFACE_RH > 85) scores.WEDGE += 12;
+    if (RH_MID > 75) scores.WEDGE += 15;
+    if (RH_MID > 85) scores.WEDGE += 12;
+    if (CAPE > 1800 && CAPE < 4500) scores.WEDGE += 15;
+    if (CAPE_3KM > 80) scores.WEDGE += 12;
+    if (STORM_SPEED < 35) scores.WEDGE += 15;  // Slow-moving
+    if (SRH > 200 && SRH < 450) scores.WEDGE += 12;
+    if (DEW_SPREAD < 8) scores.WEDGE += 12;
+    
+    // Penalty for very fast motion (wedges are typically slow)
+    if (STORM_SPEED > 50) scores.WEDGE -= 10;
 
     // ========================================================================
-    // DRILLBIT PROBABILITY
-    // Favors fast-moving storms with lower moisture
+    // DRILLBIT PROBABILITY (ENHANCED)
+    // Fast-moving + dry + high shear = thin drilling tornado
     // ========================================================================
-    if (STORM_SPEED > 40) scores.DRILLBIT += 25;
-    if (STORM_SPEED > 60) scores.DRILLBIT += 15;
-    if (PWAT < 1.2) scores.DRILLBIT += 20;
-    if (DEW_SPREAD > 10) scores.DRILLBIT += 15;
-    if (CAPE > 2500) scores.DRILLBIT += 10;
-    if (SRH > 250) scores.DRILLBIT += 10;
+    if (STORM_SPEED > 45) scores.DRILLBIT += 28;
+    if (STORM_SPEED > 65) scores.DRILLBIT += 18;
+    if (PWAT < 1.3) scores.DRILLBIT += 22;  // Raised threshold slightly
+    if (PWAT < 0.9) scores.DRILLBIT += 15;  // Very dry
+    if (DEW_SPREAD > 12) scores.DRILLBIT += 18;
+    if (DEW_SPREAD > 18) scores.DRILLBIT += 12;  // Dry line scenario
+    if (CAPE > 2500) scores.DRILLBIT += 12;
+    if (SRH > 300) scores.DRILLBIT += 12;
+    
+    // Bonus for classic dry line setup
+    if (STORM_SPEED > 50 && PWAT < 1.2 && DEW_SPREAD > 15) scores.DRILLBIT += 15;
 
     // ========================================================================
-    // CONE PROBABILITY
-    // Classic balanced tornado - moderate values across parameters
+    // CONE PROBABILITY (REBALANCED)
+    // Balanced parameters = classic cone tornado
     // ========================================================================
-    if (STP > 1 && STP < 4) scores.CONE += 30;
-    if (CAPE > 1500 && CAPE < 3500) scores.CONE += 15;
-    if (SRH > 150 && SRH < 350) scores.CONE += 15;
-    if (PWAT > 1.0 && PWAT < 1.8) scores.CONE += 10;
-    if (LAPSE_RATE_0_3 > 7 && LAPSE_RATE_0_3 < 9.5) scores.CONE += 10;
+    if (STP > 0.8 && STP < 5) scores.CONE += 35;  // Broader STP range
+    if (CAPE > 1500 && CAPE < 4500) scores.CONE += 20;  // Broader CAPE range
+    if (SRH > 180 && SRH < 400) scores.CONE += 18;
+    if (PWAT > 1.0 && PWAT < 1.8) scores.CONE += 15;
+    if (LAPSE_RATE_0_3 > 6.5 && LAPSE_RATE_0_3 < 9.5) scores.CONE += 15;
+    if (SURFACE_RH > 60 && SURFACE_RH < 85) scores.CONE += 10;
+    if (STORM_SPEED > 25 && STORM_SPEED < 50) scores.CONE += 10;  // Moderate speed
+    
+    // Bonus for well-balanced environment
+    if (STP > 1.5 && STP < 3.5 && CAPE > 2000 && SRH > 200) scores.CONE += 15;
 
     // ========================================================================
-    // ROPE PROBABILITY
+    // ROPE PROBABILITY (REBALANCED)
     // Weak, decaying conditions or marginal environments
+    // Expanded CAPE range to include marginal severe weather
     // ========================================================================
-    if (CAPE < 1500) scores.ROPE += 30;
-    if (CAPE > 500 && CAPE < 1000) scores.ROPE += 10;
-    if (SRH < 200) scores.ROPE += 20;
-    if (PWAT < 1.0) scores.ROPE += 15;
-    if (DEW_SPREAD > 15) scores.ROPE += 10;
-    if (LAPSE_RATE_0_3 < 7) scores.ROPE += 10;
+    if (CAPE < 3000) scores.ROPE += 30;  // Expanded from 1500
+    if (CAPE < 2000) scores.ROPE += 15;  // Extra boost for very low CAPE
+    if (CAPE > 500 && CAPE < 1200) scores.ROPE += 10;
+     if (SRH < 200) scores.ROPE += 20;
+     if (PWAT < 1.0) scores.ROPE += 15;
+     if (DEW_SPREAD > 15) scores.ROPE += 10;
+     if (LAPSE_RATE_0_3 < 7) scores.ROPE += 10;
+    
+    // Additional conditions for rope tornadoes
+    if (CAPE < 2500 && SRH < 250) scores.ROPE += 15;  // Weak instability + weak rotation
+    if (CAPE > 1000 && CAPE < 2500 && PWAT < 1.3) scores.ROPE += 10;  // Marginal environment
 
     // ========================================================================
     // NORMALIZE PROBABILITIES
@@ -159,6 +200,13 @@
       factors.push({ name: 'Multiple Vortices', chance: multiVortexChance });
     }
 
+    // Long-track tornado potential
+    // High SRH + fast storm motion + sufficient instability
+    if (SRH > 300 && STORM_SPEED > 35 && CAPE > 2000) {
+      const longTrackChance = Math.min(85, Math.round(35 + (SRH - 300) / 15 + (STORM_SPEED - 35) / 3));
+      factors.push({ name: 'Long-Track', chance: longTrackChance });
+    }
+
     // Lightning frequency
     if (CAPE > 3000) {
       const lightningChance = Math.min(95, Math.round(50 + (CAPE - 3000) / 40));
@@ -193,6 +241,7 @@
     const SRH = data.SRH || 0;
     const LAPSE_RATE_0_3 = data.LAPSE_RATE_0_3 || 0;
     const PWAT = data.PWAT || 0;
+    const CAPE_3KM = data.CAPE_3KM || 0;
 
     // No tornado if CAPE is too low
     if (CAPE < 500) {
@@ -206,28 +255,41 @@
 
     // Calculate composite indices for wind estimation
 
-    // Base wind potential from CAPE (instability)
-    const capeComponent = Math.sqrt(CAPE / 1000) * 30;
+    // Base wind potential from CAPE (instability) - BUFFED
+    const capeComponent = Math.sqrt(CAPE / 1000) * 32;  // Increased from 30
 
-    // Rotational component from SRH
-    const srhComponent = Math.sqrt(SRH / 100) * 25;
+    // Rotational component from SRH - BUFFED
+    const srhComponent = Math.sqrt(SRH / 100) * 27;  // Increased from 25
 
-    // Low-level instability boost from lapse rate
-    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 20;
+    // Low-level instability boost from lapse rate - BUFFED
+    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 22;  // Increased from 20
 
-    // Moisture component (can enhance or reduce wind)
-    const moistureComponent = PWAT > 1.5 ? 10 : -5;
+    // Moisture component (can enhance or reduce wind) - REBALANCED
+    const moistureComponent = PWAT > 1.5 ? 12 : -3;  // Less penalty for low moisture
+    
+    // Low-level CAPE bonus
+    const capeBonus = CAPE_3KM > 80 ? 8 : 0;
 
     // Combine components for base wind estimate
-    let baseWind = capeComponent + srhComponent + lapseComponent + moistureComponent;
+    let baseWind = capeComponent + srhComponent + lapseComponent + moistureComponent + capeBonus;
 
-    // Apply realistic bounds (65-200 mph typical range)
-    let est_min = Math.max(65, Math.round(baseWind * 0.8));
-    let est_max = Math.max(est_min + 20, Math.round(baseWind * 1.2));
+    // Apply realistic bounds with NARROWER range for consistency
+    let est_min = Math.max(65, Math.round(baseWind * 0.88));  // Changed from 0.8
+    let est_max = Math.max(est_min + 15, Math.round(baseWind * 1.12));  // Changed from 1.2, reduced gap
 
     // Cap at typical maximum
     est_min = Math.min(200, est_min);
     est_max = Math.min(200, est_max);
+    
+    // Ensure minimum gap but not too wide
+    if (est_max - est_min < 15) {
+      est_max = est_min + 15;
+    }
+    if (est_max - est_min > 30) {
+      const mid = (est_min + est_max) / 2;
+      est_min = Math.round(mid - 15);
+      est_max = Math.round(mid + 15);
+    }
 
     // ========================================================================
     // DETERMINE EF-SCALE RATING

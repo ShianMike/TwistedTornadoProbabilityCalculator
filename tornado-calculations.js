@@ -249,43 +249,43 @@
 
     // Calculate composite indices for wind estimation
 
-    // Base wind potential from CAPE (instability) - BUFFED +15%
-    const capeComponent = Math.sqrt(CAPE / 1000) * 35;  // Increased from 30 to 35
+    // Base wind potential from CAPE (instability) - BUFFED +50% total
+    const capeComponent = Math.sqrt(CAPE / 1000) * 47.5;  // Increased from 38 to 47.5 (+25%)
 
-    // Rotational component from SRH - BUFFED +15%
-    const srhComponent = Math.sqrt(SRH / 100) * 29;  // Increased from 25 to 29
+    // Rotational component from SRH - BUFFED +50% total
+    const srhComponent = Math.sqrt(SRH / 100) * 40;  // Increased from 32 to 40 (+25%)
 
-    // Low-level instability boost from lapse rate - BUFFED +15%
-    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 23;  // Increased from 20 to 23
+    // Low-level instability boost from lapse rate - BUFFED +50% total
+    const lapseComponent = (LAPSE_RATE_0_3 / 10) * 31.25;  // Increased from 25 to 31.25 (+25%)
 
     // Moisture component - BUFFED
-    const moistureComponent = PWAT > 1.5 ? 12 : -3;  // Increased bonus, reduced penalty
+    const moistureComponent = PWAT > 1.5 ? 18.75 : -2;  // Increased from 15 to 18.75 (+25%)
     
     // Low-level CAPE bonus - BUFFED
-    const capeBonus = CAPE_3KM > 100 ? 10 : 0;  // Increased from 8
+    const capeBonus = CAPE_3KM > 100 ? 15 : 0;  // Increased from 12 to 15 (+25%)
     
-    // Extreme instability bonus - NEW
-    const extremeBonus = (CAPE > 5000 && SRH > 400) ? 8 : 0;
+    // Extreme instability bonus - BUFFED
+    const extremeBonus = (CAPE > 5000 && SRH > 400) ? 12.5 : 0;  // Increased from 10 to 12.5 (+25%)
 
     // Combine components for base wind estimate
     let baseWind = capeComponent + srhComponent + lapseComponent + moistureComponent + capeBonus + extremeBonus;
 
-    // Apply realistic bounds with improved range consistency
-    let est_min = Math.max(65, Math.round(baseWind * 0.85));  // Changed from 0.88
-    let est_max = Math.max(est_min + 15, Math.round(baseWind * 1.25));  // Changed from 1.12 for better extreme scaling
+    // Apply realistic bounds with wider range for extreme scenarios
+    let est_min = Math.max(65, Math.round(baseWind * 0.50));  // Decreased from 0.60 to 0.50 (even longer range)
+    let est_max = Math.max(est_min + 15, Math.round(baseWind * 1.40));  // Increased from 1.32 to 1.40
 
-    // Cap at typical maximum (allow EF5+)
-    est_min = Math.min(220, est_min);
-    est_max = Math.min(250, est_max);
+    // Cap at higher maximum (allow EF5++)
+    est_min = Math.min(235, est_min);
+    est_max = Math.min(320, est_max);
     
     // Ensure minimum gap but not too wide
     if (est_max - est_min < 15) {
       est_max = est_min + 15;
     }
-    if (est_max - est_min > 35) {
+    if (est_max - est_min > 80) {  // Increased from 60 to allow even wider range
       const mid = (est_min + est_max) / 2;
-      est_min = Math.round(mid - 17);
-      est_max = Math.round(mid + 18);
+      est_min = Math.round(mid - 40);  // Increased from 30
+      est_max = Math.round(mid + 40);  // Increased from 30
     }
 
     // ========================================================================
@@ -315,15 +315,30 @@
     // ========================================================================
     // THEORETICAL MAXIMUM FOR EXTREME CONDITIONS
     // Calculate potential for winds beyond EF5 threshold
+    // Now triggers when estimate approaches cap (within 15-20%)
+    // BUFFED: +20% multipliers
     // ========================================================================
     let theoretical = null;
-    if (CAPE > 4500 && SRH > 450 && LAPSE_RATE_0_3 > 9.5) {
+    
+    // Original extreme threshold OR if estimates are approaching the caps
+    const isExtremeConditions = CAPE > 6000 && SRH > 650 && LAPSE_RATE_0_3 > 9.5;
+    const isNearMaxCap = est_max >= 256;  // Within 20% of 320 mph cap (320 * 0.8 = 256)
+    const isNearMinCap = est_min >= 188;  // Within 20% of 235 mph cap (235 * 0.8 = 188)
+    
+    if (isExtremeConditions || isNearMaxCap || isNearMinCap) {
       // Extreme conditions - theoretical winds beyond measured EF5
-      const theo_min = Math.round(est_max * 1.1);
-      const theo_max = Math.round(est_max * 1.3);
+      // theo_min starts from est_max (the maximum of the base range)
+      const theo_min = est_max;  // Use the maximum wind speed as theoretical minimum
+      const theo_max = Math.round(est_max * 1.56);  // Increased from 1.3 to 1.56 (+20%)
+      
+      // Cap at 500 mph, add "+" if at maximum
+      const cappedMax = Math.min(500, theo_max);
+      const maxSuffix = theo_max >= 500 ? '+' : '';
+      
       theoretical = {
-        theo_min: Math.min(250, theo_min),
-        theo_max: Math.min(300, theo_max)
+        theo_min: Math.min(500, theo_min),
+        theo_max: cappedMax,
+        theo_max_display: `${cappedMax}${maxSuffix}`
       };
     }
 

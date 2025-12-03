@@ -125,133 +125,74 @@
   
   /**
    * Draw mini wind speed visualization
-   * Shows EF-scale ranges with colored bands and estimated wind range
-   * @param {HTMLCanvasElement} canvas - Canvas element
-   * @param {Object} estimate - Wind estimate object with est_min/est_max
+   * Shows color-coded wind range with EF scale markers
+   * @param {HTMLCanvasElement} canvas - Target canvas element
+   * @param {Object} estimate - Wind estimate object with est_min and est_max
    */
   function drawMiniWind(canvas, estimate) {
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    const DPR = Math.max(1, window.devicePixelRatio || 1);
-    const cw = canvas.clientWidth || 300;
-    const ch = 48;
+    const DPR = window.devicePixelRatio || 1;
     
-    // Set canvas size for crisp rendering
-    canvas.width = Math.round(cw * DPR);
-    canvas.height = Math.round(ch * DPR);
-
-    // Clear and scale for device pixel ratio
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    ctx.save();
+    // Set canvas size with device pixel ratio
+    canvas.width = 400 * DPR;
+    canvas.height = 48 * DPR;
+    
     ctx.scale(DPR, DPR);
-
-    // ========================================================================
-    // EF-SCALE RANGES
-    // Define color bands for each EF rating
-    // ========================================================================
-    const ranges = [
-      {start: 0, end: 65, color: '#ffffff'},      // Below EF0
-      {start: 65, end: 110, color: '#4caf50'},    // EF0-EF1
-      {start: 110, end: 135, color: '#ffeb3b'},   // EF2
-      {start: 135, end: 165, color: '#ff9800'},   // EF3
-      {start: 165, end: 200, color: '#e53935'},   // EF4
-      {start: 200, end: 350, color: '#ec407a'}    // EF5+
-    ];
+    ctx.clearRect(0, 0, 400, 48);
     
-    const minX = 0, maxX = 350;
-    const pad = 6;
-    const W = cw - pad*2;
-    const H = ch;
-    
-    /**
-     * Convert wind speed to X position
-     */
-    function xFor(v){ return pad + (v-minX)/(maxX-minX) * W; }
-
-    // Draw title
-    ctx.fillStyle = '#9aa3ad';
-    ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.letterSpacing = '0.5px';
-    ctx.fillText('WIND SPEED RANGE (MPH)', cw / 2, 8);
-
-    // Draw EF-scale color bands
-    ranges.forEach(r => {
-      const x1 = xFor(r.start), x2 = xFor(r.end);
-      const w = Math.max(2, x2 - x1);
-      ctx.fillStyle = r.color;
-      roundRect(ctx, x1, (H/2)+2, w, 16, 3, true, false);
-    });
-
-    // ========================================================================
-    // DRAW WIND ESTIMATE INDICATOR
-    // Show estimated wind range with line and labels
-    // ========================================================================
-    if (estimate && typeof estimate.est_min === 'number' && typeof estimate.est_max === 'number') {
-      // Clamp estimates to display range
-      const estMin = Math.max(minX, Math.min(maxX, estimate.est_min));
-      const estMax = Math.max(minX, Math.min(maxX, estimate.est_max));
-      const xMin = xFor(estMin);
-      const xMax = xFor(estMax);
-
-      // Draw white line showing range
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(xMin, (H/2)+10);
-      ctx.lineTo(xMax, (H/2)+10);
-      ctx.stroke();
-
-      // Draw diamond marker at center
-      const cx = (xMin + xMax) / 2;
-      const cy = (H/2)+10;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      const s = 6;
-      ctx.moveTo(cx, cy - s/2);
-      ctx.lineTo(cx + s/2, cy);
-      ctx.lineTo(cx, cy + s/2);
-      ctx.lineTo(cx - s/2, cy);
-      ctx.closePath();
-      ctx.fill();
-
-      // Draw min/max speed labels with backgrounds
-      ctx.font = 'bold 11px Inter, sans-serif';
+    if (!estimate || estimate.est_min === 0) {
+      // Draw placeholder
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(0, 16, 400, 16);
+      ctx.fillStyle = '#7a8b99';
+      ctx.font = '11px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      const minText = `${estimate.est_min}`;
-      const maxText = `${estimate.est_max}`;
-      const minMetrics = ctx.measureText(minText);
-      const maxMetrics = ctx.measureText(maxText);
-      
-      const bgPadding = 4;
-      const bgHeight = 16;
-      
-      // Min speed label
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      roundRect(ctx, xMin - (minMetrics.width / 2) - bgPadding, H - 12, 
-                minMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
-      
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(minText, xMin, H - 4);
-      
-      // Max speed label
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      roundRect(ctx, xMax - (maxMetrics.width / 2) - bgPadding, H - 12,
-                maxMetrics.width + bgPadding * 2, bgHeight, 4, true, false);
-      
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(maxText, xMax, H - 4);
-    } else {
-      // No estimate available - show empty state
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      roundRect(ctx, pad, (H/2)+2, W, 16, 3, true, false);
+      ctx.fillText('No wind estimate', 200, 28);
+      return;
     }
-
-    ctx.restore();
+    
+    const MIN_SPEED = 65;
+    const MAX_SPEED = 320;
+    const BAR_WIDTH = 400;
+    const BAR_HEIGHT = 16;
+    const BAR_Y = 16;
+    
+    // Calculate positions
+    const minPos = ((estimate.est_min - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)) * BAR_WIDTH;
+    const maxPos = ((estimate.est_max - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)) * BAR_WIDTH;
+    const rangeWidth = maxPos - minPos;
+    
+    // Draw background bar with smooth gradient from green to red to pink
+    const gradient = ctx.createLinearGradient(0, 0, BAR_WIDTH, 0);
+    gradient.addColorStop(0, '#4ade80');      // EF0 (green) at 65 mph
+    gradient.addColorStop(0.08, '#fbbf24');   // EF1 (yellow) ~86 mph
+    gradient.addColorStop(0.18, '#fb923c');   // EF2 (orange) ~111 mph
+    gradient.addColorStop(0.27, '#ef4444');   // EF3 (red) ~136 mph
+    gradient.addColorStop(0.41, '#dc2626');   // EF4 (dark red) ~166 mph
+    gradient.addColorStop(0.53, '#991b1b');   // EF5 (very dark red) ~200 mph
+    gradient.addColorStop(0.70, '#be185d');   // Transitioning to pink ~243 mph
+    gradient.addColorStop(0.85, '#ec4899');   // EF5+ (pink/magenta) ~282 mph
+    gradient.addColorStop(1, '#db2777');      // EF5++ (darker pink) 320 mph
+    
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, BAR_Y, BAR_WIDTH, BAR_HEIGHT);
+    
+    // Draw active range (white overlay)
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(minPos, BAR_Y, rangeWidth, BAR_HEIGHT);
+    
+    // Draw labels with "Est." prefix
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '600 12px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Est. ${estimate.est_min}`, minPos, BAR_Y - 4);
+    
+    ctx.textAlign = 'right';
+    ctx.fillText(`Est. ${estimate.est_max}`, maxPos, BAR_Y + BAR_HEIGHT + 14);
   }
 
   // ============================================================================

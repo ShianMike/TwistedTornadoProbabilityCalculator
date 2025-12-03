@@ -1,8 +1,8 @@
-# Twisted Weather Analyzer v1.4.3
+# Twisted Weather Analyzer v1.4.5
 
 A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmospheric parameters to predict tornado morphology types and estimate wind speeds.
 
-![Twisted Weather Analyzer](https://img.shields.io/badge/version-1.4.3-blue)
+![Twisted Weather Analyzer](https://img.shields.io/badge/version-1.4.5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 🌪️ Features
@@ -102,6 +102,105 @@ twisted-analyzer/
 ```
 
 ## 📝 Version History
+
+### v1.4.5 - Extreme Wind Update
+
+**Major Wind Speed Overhaul** - Significantly increased wind estimates and expanded visualization for extreme scenarios
+
+#### Wind Speed Changes
+
+**Greatly Increased Wind Estimates**
+- Wind speeds now ~56% higher than v1.4.3
+- Extreme scenarios regularly reach **235-320 mph** (up from 220-250 mph cap)
+- Theoretical maximums can now reach **500+ mph** for unprecedented conditions
+- Much wider estimate ranges (up to 80 mph spread vs 40 mph previously)
+- Example: v1.4.3's 185-218 mph → v1.4.5's **170-305 mph**
+
+**Improved Wind Speed Bar Visualization**
+- Bar is now 33% longer (400px) for better readability
+- Added **pink/magenta gradient** for extreme winds above EF5 territory
+- White estimate bar extends much further (starts ~50% lower)
+- Wind estimates labeled with "**Est.**" prefix for clarity
+- Color gradient includes: Green → Yellow → Orange → Red → Dark Red → Pink
+
+**Theoretical Maximum Display**
+- Now appears **above** the disclaimer note for better visibility
+- Triggers more frequently for high-end scenarios
+- Shows potential winds beyond measured EF5 thresholds
+- Displays "500+" when calculations exceed the scale
+
+#### Input Validation System
+
+**25+ Validation Checks** - Helps identify unrealistic or incorrect data entry
+- Warns when dewpoint exceeds temperature
+- Flags inconsistent moisture parameters
+- Alerts for extreme values (SRH >800, Storm Speed >100, etc.)
+- Checks CAPE vs temperature relationships
+- Validates lapse rate profiles
+- Detects mid-level vs surface RH inversions
+- Plain text warnings (no emoji) with INFO/WARNING prefixes
+
+#### User Interface Improvements
+
+**Better Organization**
+- Theoretical maximum moved above disclaimer for prominence
+- Updated disclaimer text for clearer interpretation guidance
+- Auto-analysis works more reliably with all modules
+- Empty input fields no longer auto-fill with zeros
+
+**Display Order:**
+1. Wind speed estimate bar
+2. Theoretical maximum (when triggered)
+3. Wind estimate disclaimer
+4. Special tornado factors
+
+#### Bug Fixes
+- Fixed summary panel showing "0" for empty fields (now shows "—")
+- Corrected auto-analysis initialization timing
+- Fixed wind bar visualization range display
+- Improved module loading reliability
+
+### v1.4.4 - Tornado Probability Rebalance
+
+**Based on In-Game Thermodynamics Analysis**
+
+Data collected from actual Twisted gameplay scenarios showing:
+- Scenario 1: TEMP 76°F, CAPE 4534, Lapse 10.1, PWAT 1.3, Storm Speed 90mph
+- Scenario 2: TEMP 77°F, CAPE 4858, 3CAPE 140, Lapse 9.7, PWAT 1.1, SRH 494, Storm Speed 63mph
+
+**SIDEWINDER** (Rebalanced for High-Speed Scenarios)
+- Now properly triggers with SRH >400 (was >400 but scored less)
+- Increased scoring for very high storm speeds (>70, >85 mph)
+- Sweet spot: CAPE 3500-6000 (broadened from 2000-5000)
+- Better moisture range: PWAT 1.0-1.5
+- Bonus for extreme conditions: +20 when Speed >70 AND SRH >400
+
+**STOVEPIPE** (Tuned for Extreme CAPE)
+- VTP threshold lowered: 2.0 → **1.2** (triggers earlier)
+- High CAPE scoring increased: +22 at >4000, +20 at >5000
+- Lapse rate emphasis: +18 at >9.5, +12 at >10
+- Moisture preference: moderate moisture (1.0-1.5 PWAT)
+- Added 3CAPE consideration: +10 when >120
+
+**WEDGE** (Reduced in Dry/Fast Scenarios)
+- Now requires PWAT >1.6 for significant scoring
+- Heavy penalty for fast motion: -15 when speed >60
+- Requires high surface RH (>80) for full scoring
+- Reduced scoring in moderate moisture (1.3-1.6 PWAT): -10 penalty
+
+**DRILLBIT** (Buffed for Extreme Scenarios)
+- Major buff for very high storm speeds: +30 at >55, +25 at >75, +20 at >90
+- High CAPE bonus increased: +22 at >4000, +18 at >5000
+- Dry conditions emphasis: +20 at PWAT <1.4, +15 at <1.1
+- Massive bonus for extreme setup: +25 when Speed >70 + PWAT <1.3 + CAPE >4500
+
+**CONE** (Moderate Scenarios)
+- Balanced environment emphasis maintained
+- Penalty for extreme conditions: -10 when CAPE >5000 OR Speed >80
+- Better STP range: 1.0-4.0
+
+**ROPE** (Low CAPE Only)
+- Unchanged from v1.4.3
 
 ### v1.4.3 - Balance Update
 
@@ -276,6 +375,6 @@ MIT License - Feel free to modify and use for personal projects
 
 ---
 
-**Version:** 1.4.3
+**Version:** 1.4.5
 
 

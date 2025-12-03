@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="input-validation.js" defer></script>
   <script src="tornado-calculations.js" defer></script>
   <script src="chart-renderer.js" defer></script>
   <script src="script.js" defer></script>
@@ -157,13 +158,13 @@
             </div>
           </div>
 
-          <!-- Wind estimate disclaimer -->
-          <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
-            <strong>Note:</strong> Wind speed estimates are approximate calculations based on atmospheric parameters. These are theoretical estimates and should not be taken as precise predictions. Actual tornado intensity can vary significantly based on local conditions and storm dynamics not captured by this simplified model.
-          </div>
-
-          <!-- Theoretical wind estimate for extreme conditions -->
+          <!-- Theoretical wind estimate for extreme conditions - NOW FIRST -->
           <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
+
+          <!-- Wind estimate disclaimer - NOW AFTER theoretical -->
+          <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+            <strong>Note:</strong> Wind speed estimates are approximate theoretical calculations based on atmospheric parameters. Actual tornado intensity can vary significantly based on local conditions, storm dynamics, and interaction effects not captured by this simplified model. These estimates should be interpreted as general guidance rather than precise predictions.
+          </div>
 
           <!-- Special factors will be rendered here, below the EF scale -->
           <div id="specialFactors"></div>

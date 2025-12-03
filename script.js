@@ -88,14 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Read and validate each input
     allIds.forEach(k => {
       const el = get(k);
-      let v = el && el.value !== '' ? parseFloat(el.value) : 0;
-      if (!isFinite(v)) v = 0;
-      
-      // Clamp to limits if defined
-      if (limits[k]) {
-        v = Math.max(limits[k].min, Math.min(limits[k].max, v));
+      // Only read if element exists AND has a non-empty value
+      if (el && el.value !== '') {
+        let v = parseFloat(el.value);
+        if (!isFinite(v)) v = 0;
+        
+        // Clamp to limits if defined
+        if (limits[k]) {
+          v = Math.max(limits[k].min, Math.min(limits[k].max, v));
+        }
+        out[k] = v;
+      } else {
+        // Set to 0 if empty
+        out[k] = 0;
       }
-      out[k] = v;
     });
     
     return out;
@@ -111,22 +117,22 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {Object} data - Atmospheric parameter object
    */
   function populateSummary(data) {
-    // Update left column statistics
-    sum.TEMP && (sum.TEMP.textContent = data.TEMP ? String(data.TEMP) : '—');
-    sum.DEW && (sum.DEW.textContent = data.DEWPOINT ? String(data.DEWPOINT) : '—');
-    sum.CAPE && (sum.CAPE.textContent = data.CAPE ? String(data.CAPE) : '—');
-    sum.LAPSE && (sum.LAPSE.textContent = data.LAPSE_RATE_0_3 ? String(data.LAPSE_RATE_0_3) : '—');
-    sum.PWAT && (sum.PWAT.textContent = data.PWAT ? String(data.PWAT) : '—');
-    sum.RH && (sum.RH.textContent = data.SURFACE_RH ? String(data.SURFACE_RH) : '—');
-    sum.SRH && (sum.SRH.textContent = data.SRH ? String(data.SRH) : '—');
+    // Update left column statistics - only show if value exists and is non-zero
+    sum.TEMP && (sum.TEMP.textContent = (data.TEMP && data.TEMP !== 0) ? String(data.TEMP) : '—');
+    sum.DEW && (sum.DEW.textContent = (data.DEWPOINT && data.DEWPOINT !== 0) ? String(data.DEWPOINT) : '—');
+    sum.CAPE && (sum.CAPE.textContent = (data.CAPE && data.CAPE !== 0) ? String(data.CAPE) : '—');
+    sum.LAPSE && (sum.LAPSE.textContent = (data.LAPSE_RATE_0_3 && data.LAPSE_RATE_0_3 !== 0) ? String(data.LAPSE_RATE_0_3) : '—');
+    sum.PWAT && (sum.PWAT.textContent = (data.PWAT && data.PWAT !== 0) ? String(data.PWAT) : '—');
+    sum.RH && (sum.RH.textContent = (data.SURFACE_RH && data.SURFACE_RH !== 0) ? String(data.SURFACE_RH) : '—');
+    sum.SRH && (sum.SRH.textContent = (data.SRH && data.SRH !== 0) ? String(data.SRH) : '—');
 
     // Update right column statistics
     const sum3CAPE = document.getElementById('sum_3CAPE');
     const sum36LAPSE = document.getElementById('sum_36LAPSE');
     const sum700RH = document.getElementById('sum_700RH');
-    if (sum3CAPE) sum3CAPE.textContent = data.CAPE_3KM ? String(data.CAPE_3KM) : '—';
-    if (sum36LAPSE) sum36LAPSE.textContent = data.LAPSE_3_6KM ? String(data.LAPSE_3_6KM) : '—';
-    if (sum700RH) sum700RH.textContent = data.RH_MID ? String(data.RH_MID) : '—';
+    if (sum3CAPE) sum3CAPE.textContent = (data.CAPE_3KM && data.CAPE_3KM !== 0) ? String(data.CAPE_3KM) : '—';
+    if (sum36LAPSE) sum36LAPSE.textContent = (data.LAPSE_3_6KM && data.LAPSE_3_6KM !== 0) ? String(data.LAPSE_3_6KM) : '—';
+    if (sum700RH) sum700RH.textContent = (data.RH_MID && data.RH_MID !== 0) ? String(data.RH_MID) : '—';
   }
 
   // ============================================================================
@@ -491,6 +497,138 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================================
+  // ANALYSIS TRIGGER
+  // ============================================================================
+  
+  /**
+   * Handle analyze button click - triggers analysis and chart rendering
+   */
+  function handleAnalyze() {
+    // Hide previous results
+    const resultsDiv = document.getElementById('results');
+    if (resultsDiv) resultsDiv.style.display = 'none';
+    
+    // Read and validate inputs
+    const inputData = readInputs();
+    
+    // If no data, render empty chart
+    const allZero = Object.values(inputData).every(v => v === 0);
+    if (allZero) {
+      renderEmptyProb();
+      return;
+    }
+    
+    // ========================================================================
+    // PROBABILITY ANALYSIS LOGIC
+    // ========================================================================
+    
+    // For development, use fixed probabilities
+    const probData = [
+      { label: 'SIDEWINDER', value: 10 },
+      { label: 'STOVEPIPE', value: 20 },
+      { label: 'WEDGE', value: 30 },
+      { label: 'DRILLBIT', value: 25 },
+      { label: 'CONE', value: 15 },
+      { label: 'ROPE', value: 5 }
+    ];
+    
+    // TODO: Replace with real analysis logic
+    // const probData = analyzeTornadoProbabilities(inputData);
+    
+    // ========================================================================
+    // END PROBABILITY ANALYSIS LOGIC
+    // ========================================================================
+    
+    // Render probability chart with analyzed data
+    renderProbChart(probData);
+    
+    // Populate summary panel with input data
+    populateSummary(inputData);
+    
+    // Show results div with animation
+    if (resultsDiv) {
+      resultsDiv.style.display = 'block';
+      resultsDiv.animate([
+        { opacity: 0 },
+        { opacity: 1 }
+      ], {
+        duration: 400,
+        easing: 'easeOutQuad',
+        fill: 'forwards'
+      });
+    }
+  }
+
+  // ============================================================================
+  // RESET FUNCTIONALITY
+  // ============================================================================
+  
+  /**
+   * Handle reset button click - clears all inputs and results
+   */
+  function handleReset() {
+    // Clear all input fields
+    ids.forEach(id => {
+      const el = get(id);
+      if (el) el.value = '';
+    });
+    
+    // Clear summary values
+    Object.values(sum).forEach(el => {
+      if (el) el.textContent = '—';
+    });
+    
+    // Render empty chart
+    renderEmptyProb();
+    
+    // Hide results div
+    const resultsDiv = document.getElementById('results');
+    if (resultsDiv) resultsDiv.style.display = 'none';
+  }
+
+  // ============================================================================
+  // EXPORT FUNCTIONALITY (CSV)
+  // ============================================================================
+  
+  /**
+   * Export current input and results data as CSV file
+   * Formats data as CSV and triggers download
+   */
+  function exportCSV() {
+    // Gather input data
+    const inputData = readInputs();
+    
+    // Gather summary data
+    const summaryData = {
+      TEMP: sum.TEMP.textContent,
+      DEW: sum.DEW.textContent,
+      CAPE: sum.CAPE.textContent,
+      LAPSE: sum.LAPSE.textContent,
+      PWAT: sum.PWAT.textContent,
+      RH: sum.RH.textContent,
+      SRH: sum.SRH.textContent
+    };
+    
+    // Combine input and summary data
+    const csvData = [
+      ['Parameter', 'Value'],
+      ...Object.entries({...inputData, ...summaryData}).map(([k, v]) => [k, v])
+    ];
+    
+    // Convert to CSV string
+    const csvContent = 'data:text/csv;charset=utf-8,' + csvData.map(e => e.join(',')).join('\n');
+    
+    // Encode URI and trigger download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'twisted_weather_analysis.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // ============================================================================
   // CHART TOOLTIP SETUP
   // ============================================================================
   
@@ -611,6 +749,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = readInputs();
     populateSummary(data);
     
+    // Validate inputs and show warnings
+    if (window.InputValidation) {
+      window.InputValidation.validateInputs(data);
+    }
+    
     // Check if calculation modules are loaded
     if (!window.TornadoCalculations || !window.ChartRenderer) {
       console.warn('[Analysis] Required modules not loaded yet, retrying in 500ms...');
@@ -631,17 +774,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.CAPE > 0) windLabel.textContent = estimate.label;
     else windLabel.textContent = 'No estimate yet';
     
-    // Show/hide theoretical wind estimate for extreme conditions
+    // Show/hide theoretical wind estimate for extreme conditions (ABOVE disclaimer)
     const theoreticalDiv = document.getElementById('theoreticalWind');
+    const windDisclaimerDiv = document.getElementById('windDisclaimer');
+    
     if (theoreticalDiv && estimate.theoretical) {
       theoreticalDiv.style.display = 'block';
-      theoreticalDiv.innerHTML = `<strong>Theoretical Maximum:</strong> ${estimate.theoretical.theo_min}–${estimate.theoretical.theo_max} mph<br><span style="font-size:11px;opacity:0.8;">Extreme conditions may support winds beyond measured EF5 thresholds</span>`;
+      const maxDisplay = estimate.theoretical.theo_max_display || estimate.theoretical.theo_max;
+      theoreticalDiv.innerHTML = `<strong>Theoretical Maximum:</strong> ${estimate.theoretical.theo_min}–${maxDisplay} mph<br><span style="font-size:11px;opacity:0.8;">Extreme conditions may support winds beyond measured EF5 thresholds</span>`;
     } else if (theoreticalDiv) {
       theoreticalDiv.style.display = 'none';
     }
     
-    // Show/hide wind disclaimer
-    const windDisclaimerDiv = document.getElementById('windDisclaimer');
+    // Show/hide wind disclaimer (BELOW theoretical)
     if (windDisclaimerDiv) {
       windDisclaimerDiv.style.display = data.CAPE > 0 ? 'block' : 'none';
     }
@@ -652,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================================
   
   const thermoCard = document.querySelector('.thermo-card');
-  const specialFactorsContainer = thermoCard.querySelector('#specialFactors');
+  const specialFactorsContainer = thermoCard ? thermoCard.querySelector('#specialFactors') : null;
 
   /**
    * Render special tornado factors (rain-wrap, hail, etc.)
@@ -814,7 +959,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[Export] Capturing thermodynamics card...');
     const thermoCanvas = await html2canvas(thermoCard, {
       backgroundColor: '#121212',
-      scale: 2,                          // 2x resolution for quality
+      scale: 2,
       logging: true,
       allowTaint: true,
       useCORS: true
@@ -836,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = combined.getContext('2d');
     
     combined.width = Math.max(thermoCanvas.width, probCanvas.width);
-    combined.height = thermoCanvas.height + probCanvas.height + 40;  // 40px spacing
+    combined.height = thermoCanvas.height + probCanvas.height + 40;
     
     // Fill background
     ctx.fillStyle = '#121212';
@@ -875,9 +1020,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   /**
    * Initialize the application
-   * - Render empty chart
-   * - Setup initial wind visualization
-   * - Check for required modules
    */
   function init() {
     console.log('Twisted Weather Analyzer initialized');
@@ -887,9 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Modules loaded:', {
         TornadoCalculations: !!window.TornadoCalculations,
         ChartRenderer: !!window.ChartRenderer,
-        ThermoExtractor: !!window.ThermoExtractor,
-        HodographCore: !!window.HodographCore,
-        HodographUI: !!window.HodographUI,
+        InputValidation: !!window.InputValidation,
         Chart: typeof Chart !== 'undefined',
         ChartDataLabels: typeof ChartDataLabels !== 'undefined'
       });
@@ -917,15 +1057,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // WINDOW RESIZE HANDLER
   // ============================================================================
   
-  /**
-   * Handle window resize events
-   * Re-render charts with proper dimensions
-   */
   let resizeTimer = null;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      // Re-render probability chart
       if (probChart) {
         const data = probChart.data.labels.map((l, i) => ({
           Type: l, 
@@ -936,7 +1071,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderEmptyProb();
       }
       
-      // Re-render wind visualization
       const currentData = readInputs();
       const estimate = window.TornadoCalculations ? 
         window.TornadoCalculations.estimate_wind(currentData) : null;
@@ -948,19 +1082,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // THERMODYNAMICS TOOLTIP SETUP
   // ============================================================================
   
-  /**
-   * Setup tooltips for thermodynamics statistics
-   * Shows parameter descriptions on hover
-   */
   (function setupThermoTooltips(){
     const tooltip = document.getElementById('statTooltip');
     if (!tooltip) return;
     
     const labels = document.querySelectorAll('.thermo-card .k[data-desc]');
     
-    /**
-     * Show tooltip with parameter description
-     */
     function showTip(e){
       const el = e.currentTarget;
       const desc = el.getAttribute('data-desc') || '';
@@ -971,9 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
       positionTip(e);
     }
     
-    /**
-     * Position tooltip near label
-     */
     function positionTip(e){
       const rect = e.currentTarget.getBoundingClientRect();
       const left = Math.min(window.innerWidth - 300, Math.max(8, rect.left + 8));
@@ -982,9 +1106,6 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip.style.top = `${top}px`;
     }
     
-    /**
-     * Move tooltip with cursor
-     */
     function moveTip(e){
       const left = Math.min(window.innerWidth - 300, Math.max(8, e.clientX + 8));
       const top = Math.min(window.innerHeight - 120, Math.max(8, e.clientY + 12));
@@ -992,16 +1113,12 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip.style.top = `${top}px`;
     }
     
-    /**
-     * Hide tooltip
-     */
     function hideTip(){
       tooltip.classList.remove('visible');
       tooltip.setAttribute('aria-hidden','true');
       delete tooltip.dataset.source;
     }
     
-    // Attach event listeners to all stat labels
     labels.forEach(lbl => {
       lbl.addEventListener('mouseenter', showTip);
       lbl.addEventListener('mousemove', moveTip);
@@ -1010,8 +1127,10 @@ document.addEventListener('DOMContentLoaded', () => {
       lbl.addEventListener('blur', hideTip);
     });
     
-    // Hide tooltip on scroll/resize
     window.addEventListener('scroll', hideTip, true);
     window.addEventListener('resize', hideTip);
   })();
+  
+  // Run initialization
+  init();
 });

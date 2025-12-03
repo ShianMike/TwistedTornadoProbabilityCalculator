@@ -1,6 +1,6 @@
 # Twisted Weather Analyzer v1.4.3
 
-A web-based tornado analysis tool for the **Twisted** weather simulation game. Analyzes atmospheric parameters to predict tornado morphology types and estimate wind speeds.
+A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmospheric parameters to predict tornado morphology types and estimate wind speeds.
 
 ![Twisted Weather Analyzer](https://img.shields.io/badge/version-1.4.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)

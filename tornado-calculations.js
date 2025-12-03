@@ -53,10 +53,10 @@
     // SIDEWINDER PROBABILITY (REBALANCED)
     // Strong rotation + forward speed = long-track rotational tornado
     // ========================================================================
-    if (SRH > 250) scores.SIDEWINDER += 20;
-    if (SRH > 400) scores.SIDEWINDER += 18;
-    if (STORM_SPEED > 35) scores.SIDEWINDER += 15;
-    if (STORM_SPEED > 55) scores.SIDEWINDER += 12;
+    if (SRH > 400) scores.SIDEWINDER += 20;
+    if (SRH > 550) scores.SIDEWINDER += 18;
+    if (STORM_SPEED > 55) scores.SIDEWINDER += 15;
+    if (STORM_SPEED > 70) scores.SIDEWINDER += 12;
     if (CAPE > 2000 && CAPE < 5000) scores.SIDEWINDER += 15;
     if (LAPSE_RATE_0_3 > 8) scores.SIDEWINDER += 10;
     if (PWAT < 1.5) scores.SIDEWINDER += 10;
@@ -89,27 +89,27 @@
     if (SURFACE_RH > 85) scores.WEDGE += 12;
     if (RH_MID > 75) scores.WEDGE += 15;
     if (RH_MID > 85) scores.WEDGE += 12;
-    if (CAPE > 1800 && CAPE < 4500) scores.WEDGE += 15;
-    if (CAPE_3KM > 80) scores.WEDGE += 12;
-    if (STORM_SPEED < 35) scores.WEDGE += 15;  // Slow-moving
-    if (SRH > 200 && SRH < 450) scores.WEDGE += 12;
+    if (CAPE > 3200 && CAPE < 6000) scores.WEDGE += 15;
+    if (CAPE_3KM > 100) scores.WEDGE += 12;
+    if (STORM_SPEED < 65) scores.WEDGE += 15;  // Slow-moving
+    if (SRH > 400 && SRH < 600) scores.WEDGE += 12;
     if (DEW_SPREAD < 8) scores.WEDGE += 12;
     
     // Penalty for very fast motion (wedges are typically slow)
-    if (STORM_SPEED > 50) scores.WEDGE -= 10;
+    if (STORM_SPEED > 65) scores.WEDGE -= 10;
 
     // ========================================================================
     // DRILLBIT PROBABILITY (ENHANCED)
     // Fast-moving + dry + high shear = thin drilling tornado
     // ========================================================================
-    if (STORM_SPEED > 45) scores.DRILLBIT += 28;
-    if (STORM_SPEED > 65) scores.DRILLBIT += 18;
+    if (STORM_SPEED > 65) scores.DRILLBIT += 28;
+    if (STORM_SPEED > 75) scores.DRILLBIT += 18;
     if (PWAT < 1.3) scores.DRILLBIT += 22;  // Raised threshold slightly
     if (PWAT < 0.9) scores.DRILLBIT += 15;  // Very dry
     if (DEW_SPREAD > 12) scores.DRILLBIT += 18;
     if (DEW_SPREAD > 18) scores.DRILLBIT += 12;  // Dry line scenario
-    if (CAPE > 2500) scores.DRILLBIT += 12;
-    if (SRH > 300) scores.DRILLBIT += 12;
+    if (CAPE > 4500) scores.DRILLBIT += 12;
+    if (SRH > 400) scores.DRILLBIT += 12;
     
     // Bonus for classic dry line setup
     if (STORM_SPEED > 50 && PWAT < 1.2 && DEW_SPREAD > 15) scores.DRILLBIT += 15;
@@ -119,15 +119,15 @@
     // Balanced parameters = classic cone tornado
     // ========================================================================
     if (STP > 0.8 && STP < 5) scores.CONE += 35;  // Broader STP range
-    if (CAPE > 1500 && CAPE < 4500) scores.CONE += 20;  // Broader CAPE range
-    if (SRH > 180 && SRH < 400) scores.CONE += 18;
+    if (CAPE > 1500 && CAPE < 6000) scores.CONE += 20;  // Broader CAPE range
+    if (SRH > 180 && SRH < 500) scores.CONE += 18;
     if (PWAT > 1.0 && PWAT < 1.8) scores.CONE += 15;
     if (LAPSE_RATE_0_3 > 6.5 && LAPSE_RATE_0_3 < 9.5) scores.CONE += 15;
     if (SURFACE_RH > 60 && SURFACE_RH < 85) scores.CONE += 10;
-    if (STORM_SPEED > 25 && STORM_SPEED < 50) scores.CONE += 10;  // Moderate speed
+    if (STORM_SPEED > 40 && STORM_SPEED < 80) scores.CONE += 10;  // Moderate speed
     
     // Bonus for well-balanced environment
-    if (STP > 1.5 && STP < 3.5 && CAPE > 2000 && SRH > 200) scores.CONE += 15;
+    if (STP > 1.5 && STP < 3.5 && CAPE > 4000 && SRH > 350) scores.CONE += 15;
 
     // ========================================================================
     // ROPE PROBABILITY (REBALANCED)

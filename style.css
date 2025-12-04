@@ -14,10 +14,10 @@ html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
 .app-header h1{margin:0;font-size:20px}
 .subtitle{color:var(--muted);margin-top:6px;font-size:13px}
 
-/* layout */
+/* layout - BACK TO ORIGINAL 2-COLUMN */
 .layout-grid{
   display:grid;
-  grid-template-columns: 440px 1fr;
+  grid-template-columns: 440px 1fr; /* Back to original: left inputs | right cards */
   gap:32px;
   align-items:start;
 }
@@ -32,7 +32,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
   min-width:0;
 }
 
-/* left column form */
+/* left column form - BACK TO ORIGINAL SIZE */
 .left-col{
   width:440px;
   max-width:100%;
@@ -128,23 +128,35 @@ input:focus{
   margin-bottom: 0;
 }
 
-/* right */
-.right-col{display:flex;flex-direction:column;gap:18px;position:relative}
+/* right - BACK TO FLEX WITH STACKED CARDS */
+.right-col{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  position:relative;
+  margin-bottom: 0;
+}
 
-/* thermo */
+/* thermo - REMOVE GRID POSITIONING */
 .thermo-card{
   padding:20px 22px 22px 22px;
   overflow:visible;
   min-height:240px;
   position:relative;
   border-radius:16px;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  contain: layout;
+  height: fit-content;
 }
-.thermo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.thermo-header h2{margin:0;font-size:18px}
-.vip{opacity:0.25;font-weight:700}
 
 /* two-column inner grid */
-.thermo-grid{display:grid;grid-template-columns: 1fr 1fr;gap:12px}
+.thermo-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
 
 /* stat panel */
 .stat-panel{
@@ -163,7 +175,7 @@ input:focus{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:8px;
+  gap:4px;
   padding:7px 2px;
   min-height:30px;
   flex:0 0 auto;
@@ -174,106 +186,154 @@ input:focus{
   padding-top:2px;
 }
 
-.k{flex: 1 1 50%; color:#b9cbe0; font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; line-height:1.1; word-break:break-word}
-.v{flex: 0 0 28%; font-weight:800; color:#ffefdf; text-align:right; white-space:nowrap; min-width:56px; font-size:13px; line-height:1.1}
-.unit{flex: 0 0 18%; color:var(--muted); font-size:11px; text-align:right; min-width:48px; line-height:1.1}
+.k{
+  flex: 1 1 auto;
+  color:#b9cbe0;
+  font-weight:600;
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding-right:6px;
+  line-height:1.1;
+  word-break:break-word;
+  max-width: 60%;
+}
+.v{
+  flex: 0 0 auto;
+  font-weight:800;
+  color:#ffefdf;
+  text-align:right;
+  white-space:nowrap;
+  min-width:44px;
+  max-width:60px;
+  font-size:13px;
+  line-height:1.1;
+  padding-right: 2px;
+}
+.unit{
+  flex: 0 0 auto;
+  color:var(--muted);
+  font-size:11px;
+  text-align:left;
+  min-width:38px;
+  line-height:1.1;
+}
 
-/* thermo footer with mini wind */
+/* thermo footer with mini wind - MODERN SPACING */
 .thermo-footer{
   display:flex;
-  align-items:flex-end;
+  align-items:center;
   justify-content:space-between;
-  margin-top:16px;
-  gap:18px;
-  padding-top:14px;
-  border-top:1px solid rgba(255,255,255,0.04);
+  gap:16px; /* Increased from 8px */
+  padding:12px 16px; /* Increased padding */
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px; /* Slightly larger radius */
+  margin-bottom: 10px; /* Increased spacing */
 }
 
 .wind-left{
   display:flex;
   flex-direction:column;
-  gap:8px;
-  flex:1;
-  min-width:0;
+  gap:4px; /* Increased from 1px */
+  flex-shrink:0;
 }
 
 .wind-label{
   color:#ffffff;
   font-weight:700;
-  font-size:15px;
+  font-size:15px; /* Increased from 12px */
   line-height:1.3;
-  letter-spacing:-0.3px;
+  letter-spacing:-0.02em; /* Tighter letter spacing for modern look */
 }
 
 .ef-label{
-  color:#b9cbe0;
-  font-size:12px;
+  color:#9ca3af;
+  font-size:11px; /* Increased from 9px */
   font-weight:500;
-  opacity:0.85;
+  opacity:0.8;
+  letter-spacing:0.02em;
 }
 
 .miniwrap{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:6px;
-  padding:12px;
-  background:rgba(255,255,255,0.01);
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.02);
-  min-width:240px;
-  flex-shrink:0;
+  flex: 1;
+  min-width: 200px; /* Increased from 180px */
+  max-width: 380px; /* Increased from 350px */
+  padding: 6px 10px; /* Increased padding */
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
 }
 
 #miniWind{
-  width:100% !important;
-  height:auto !important;
-  display:block;
-  border-radius:6px;
-  background:rgba(0,0,0,0.2);
+  display: block; 
+  width: 100%;
+  height: 20px; /* Increased from 16px for better visibility */
+  border-radius: 4px; /* Slightly larger radius */
 }
 
-/* wind estimate disclaimer */
-.wind-disclaimer {
-  margin-top: 12px;
-  padding: 8px 10px;
-  background: rgba(158, 158, 158, 0.06);
-  border: 1px solid rgba(158, 158, 158, 0.15);
+/* Special factors styling */
+.special-factors,
+#specialFactors {
+  margin-top: 12px; /* Increased from 8px */
+  padding: 10px 14px; /* Increased padding */
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: #b9cbe0;
+  font-size: 12px; /* Increased from 10px */
+  line-height: 1.6;
+  color: #a0aec0;
+  position: relative;
+  display: block;
 }
 
-.wind-disclaimer strong {
-  color: #dfe9f2;
+.special-factors strong,
+#specialFactors strong {
+  color: #ffffff;
   font-weight: 700;
+  font-size: 13px; /* Increased */
 }
 
-/* theoretical wind estimate for extreme conditions */
-.theoretical-wind {
-  margin-top: 14px;
-  padding: 10px 12px;
-  background: rgba(236, 64, 122, 0.08);
-  border: 1px solid rgba(236, 64, 122, 0.25);
-  border-radius: 8px;
-  font-size: 12px;
+/* Theoretical wind styling */
+.theoretical-wind,
+#theoreticalWind {
+  margin-top: 10px; /* Increased from 6px */
+  padding: 10px 14px; /* Increased padding */
+  background: rgba(233, 30, 99, 0.1);
+  border-left: 3px solid #e91e63; /* Thicker border */
+  border-radius: 4px;
+  font-size: 12px; /* Increased from 10px */
   line-height: 1.5;
-  color: #ffb3d1;
+  color: #f8b4d0;
+  position: relative;
+  display: block;
 }
 
-.theoretical-wind strong {
-  color: #ec407a;
-  font-weight: 700;
+/* Wind disclaimer styling */
+.wind-disclaimer,
+#windDisclaimer {
+  margin-top: 10px; /* Increased from 6px */
+  padding: 10px 14px; /* Increased padding */
+  background: rgba(255, 193, 7, 0.08);
+  border-left: 3px solid #ffc107; /* Thicker border */
+  border-radius: 4px;
+  font-size: 11px; /* Increased from 9px */
+  line-height: 1.5;
+  color: #ffe082;
+}
+
+#windDisclaimer strong {
+  color: #ffc107;
+  font-weight: 600;
 }
 
 /* probability card and chart sizing */
 .prob-card {
   min-height: 360px;
-  padding: 16px 16px 18px 16px;
+  padding: 16px 16px 16px 16px;
   overflow: hidden;
   border-radius: 16px;
   position: relative;
+  margin-bottom: 0;
+  height: fit-content;
 }
 .prob-card h3{margin:0 0 10px 0;font-size:16px}
 .chart-wrap{height:360px;min-height:240px;width:100%;overflow:hidden;position:relative;padding-right:90px;pointer-events:auto}
@@ -389,7 +449,7 @@ canvas{display:block;width:100% !important;height:auto !important;pointer-events
 /* footer */
 .app-footer{
   max-width:1200px;
-  margin:40px auto 20px;
+  margin: 24px auto 20px; /* Reduced top margin from 40px to 24px */
   padding:20px;
   text-align:center;
   color:var(--muted);
@@ -413,14 +473,174 @@ canvas{display:block;width:100% !important;height:auto !important;pointer-events
   line-height: 1.5;
 }
 
-/* responsive */
+/* Image upload tip styling */
+.image-tip {
+  margin: 16px 0;
+  padding: 14px;
+  background: rgba(38, 198, 218, 0.08);
+  border: 1px solid rgba(38, 198, 218, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tip-header {
+  font-weight: 700;
+  font-size: 13px;
+  color: #26c6da;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tip-content p {
+  margin: 0 0 10px 0;
+  color: #b9cbe0;
+}
+
+.tip-content p strong {
+  color: #dfe9f2;
+}
+
+.tip-image-container {
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tip-example-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.tip-note {
+  margin: 10px 0 0 0 !important;
+  padding: 8px;
+  background: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #ff9800;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #ffb74d;
+}
+
+/* responsive - BACK TO ORIGINAL */
 @media (max-width:980px){
   .layout-grid{grid-template-columns:1fr;gap:18px}
   .left-col{width:100%}
   .thermo-grid{grid-template-columns:1fr;row-gap:12px}
   .chart-wrap{height:300px;padding-right:44px}
   .mini-wind-wrapper{width:100%;align-items:flex-start;margin-left:0}
+  
+  /* thermo footer with mini wind */
+.thermo-footer{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-top:16px;
+  gap:18px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,0.04);
+  flex-wrap: wrap;
+}
+
+.wind-left{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+  min-width:0;
+  max-width: 100%;
+}
+
+.wind-label{
+  color:#ffffff;
+  font-weight:700;
+  font-size:15px;
+  line-height:1.3;
+  letter-spacing:-0.3px;
+  word-break: break-word;
+}
+
+.ef-label{
+  color:#b9cbe0;
+  font-size:12px;
+  font-weight:500;
+  opacity:0.85;
+}
+
+.miniwrap{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+  padding:12px;
+  background:rgba(255,255,255,0.01);
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.02);
+  width:100%;
+  max-width:100%;
+  flex-shrink:1;
+}
 }
 
 /* safety */
 .card * { max-width: 100%; box-sizing: border-box; }
+
+/* Wind estimate section - COMPACT & PROPERLY LAID OUT */
+.wind-estimate-section,
+#windEstimate {
+  width: 100%;
+  display: block;
+  position: relative;
+  margin-top: 16px; /* Increased from 12px */
+  padding: 0;
+}
+
+/* thermo header alignment fix */
+.thermo-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+  gap: 12px; /* Add gap between elements */
+}
+
+.thermo-header h2{
+  margin:0;
+  font-size:18px;
+  display: flex; /* Changed from inline-flex to flex */
+  align-items: center;
+  gap: 12px;
+  flex: 1; /* Allow h2 to take available space */
+}
+
+.vip{
+  opacity:0.25;
+  font-weight:700;
+  font-size:14px; /* Explicit size */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Risk badge styling - ensure proper alignment */
+#riskBadge {
+  display: inline-flex !important; /* Use flex for better alignment */
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  margin-left: 0 !important; /* Remove left margin */
+  vertical-align: middle;
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent shrinking */
+}

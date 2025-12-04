@@ -124,75 +124,136 @@
   // ============================================================================
   
   /**
-   * Draw mini wind speed visualization
-   * Shows color-coded wind range with EF scale markers
-   * @param {HTMLCanvasElement} canvas - Target canvas element
-   * @param {Object} estimate - Wind estimate object with est_min and est_max
+   * Draw mini wind speed gradient bar
+   * Compact design with proper text sizing
+   * @param {HTMLCanvasElement} canvas - Canvas element
+   * @param {Object} estimate - Wind estimate object with min/max values
    */
   function drawMiniWind(canvas, estimate) {
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const DPR = window.devicePixelRatio || 1;
-    
-    // Set canvas size with device pixel ratio
-    canvas.width = 400 * DPR;
-    canvas.height = 48 * DPR;
-    
-    ctx.scale(DPR, DPR);
-    ctx.clearRect(0, 0, 400, 48);
-    
-    if (!estimate || estimate.est_min === 0) {
-      // Draw placeholder
-      ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.fillRect(0, 16, 400, 16);
-      ctx.fillStyle = '#7a8b99';
-      ctx.font = '11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('No wind estimate', 200, 28);
+    if (!canvas || !estimate) {
+      console.warn('[ChartRenderer] Missing canvas or estimate');
       return;
     }
+
+    console.log('[ChartRenderer] Drawing wind bar with estimate:', estimate);
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Realistic EF Scale colors with pink for 200+ mph
+    const efColors = [
+      { mph: 0,   color: '#6b7280' },
+      { mph: 65,  color: '#3b82f6' },
+      { mph: 86,  color: '#10b981' },
+      { mph: 111, color: '#fbbf24' },
+      { mph: 136, color: '#f97316' },
+      { mph: 166, color: '#ef4444' },
+      { mph: 200, color: '#db2777' },
+      { mph: 250, color: '#c026d3' },
+      { mph: 300, color: '#a21caf' },
+      { mph: 400, color: '#86198f' }
+    ];
+
+    const maxMph = 400;
+    const minPos = (estimate.est_min / maxMph) * width;
+    const maxPos = (estimate.est_max / maxMph) * width;
+
+    // Create gradient
+    const bgGradient = ctx.createLinearGradient(0, 0, width, 0);
+    efColors.forEach(ef => {
+      bgGradient.addColorStop(ef.mph / maxMph, ef.color);
+    });
+
+    // Draw main bar with modern radius
+    const radius = 6; /* Increased from 4 for modern look */
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, radius);
+    ctx.fillStyle = bgGradient;
+    ctx.fill();
+    ctx.restore();
+
+    // Darken non-active areas
+    ctx.save();
+    ctx.globalAlpha = 0.65; /* Slightly lighter for modern look */
+    ctx.fillStyle = '#000000';
     
-    const MIN_SPEED = 65;
-    const MAX_SPEED = 320;
-    const BAR_WIDTH = 400;
-    const BAR_HEIGHT = 16;
-    const BAR_Y = 16;
+    if (minPos > 2) {
+      ctx.beginPath();
+      ctx.roundRect(0, 0, minPos, height, [radius, 0, 0, radius]);
+      ctx.fill();
+    }
     
-    // Calculate positions
-    const minPos = ((estimate.est_min - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)) * BAR_WIDTH;
-    const maxPos = ((estimate.est_max - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)) * BAR_WIDTH;
-    const rangeWidth = maxPos - minPos;
+    if (maxPos < width - 2) {
+      ctx.beginPath();
+      ctx.roundRect(maxPos, 0, width - maxPos, height, [0, radius, radius, 0]);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Draw thin EF scale dividers
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    [65, 86, 111, 136, 166, 200].forEach(mph => {
+      const x = Math.round((mph / maxMph) * width);
+      ctx.beginPath();
+      ctx.moveTo(x, 2);
+      ctx.lineTo(x, height - 2);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // Draw range indicators with modern styling
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 2.5; /* Slightly thicker */
+    ctx.lineCap = 'round'; /* Rounded ends for modern look */
     
-    // Draw background bar with smooth gradient from green to red to pink
-    const gradient = ctx.createLinearGradient(0, 0, BAR_WIDTH, 0);
-    gradient.addColorStop(0, '#4ade80');      // EF0 (green) at 65 mph
-    gradient.addColorStop(0.08, '#fbbf24');   // EF1 (yellow) ~86 mph
-    gradient.addColorStop(0.18, '#fb923c');   // EF2 (orange) ~111 mph
-    gradient.addColorStop(0.27, '#ef4444');   // EF3 (red) ~136 mph
-    gradient.addColorStop(0.41, '#dc2626');   // EF4 (dark red) ~166 mph
-    gradient.addColorStop(0.53, '#991b1b');   // EF5 (very dark red) ~200 mph
-    gradient.addColorStop(0.70, '#be185d');   // Transitioning to pink ~243 mph
-    gradient.addColorStop(0.85, '#ec4899');   // EF5+ (pink/magenta) ~282 mph
-    gradient.addColorStop(1, '#db2777');      // EF5++ (darker pink) 320 mph
+    ctx.beginPath();
+    ctx.moveTo(Math.round(minPos), 2);
+    ctx.lineTo(Math.round(minPos), height - 2);
+    ctx.stroke();
     
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, BAR_Y, BAR_WIDTH, BAR_HEIGHT);
-    
-    // Draw active range (white overlay)
-    ctx.globalAlpha = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(maxPos), 2);
+    ctx.lineTo(Math.round(maxPos), height - 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // TEXT RENDERING - Modern typography
+    ctx.save();
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(minPos, BAR_Y, rangeWidth, BAR_HEIGHT);
     
-    // Draw labels with "Est." prefix
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = '600 12px Inter, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Est. ${estimate.est_min}`, minPos, BAR_Y - 4);
+    // Strong shadow for text visibility
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 1;
+
+    const midY = height / 2;
+
+    // Speed range label with modern font sizing
+    ctx.font = '600 15px Inter, sans-serif'; /* Slightly larger and semi-bold */
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '-0.02em';
     
-    ctx.textAlign = 'right';
-    ctx.fillText(`Est. ${estimate.est_max}`, maxPos, BAR_Y + BAR_HEIGHT + 14);
+    const centerX = (minPos + maxPos) / 2;
+    const rangeText = `${estimate.est_min}-${estimate.est_max} mph`;
+    
+    // Show if there's enough space
+    if ((maxPos - minPos) > 100) {
+      ctx.fillText(rangeText, centerX, midY);
+    }
+
+    ctx.restore();
+
+    console.log('[ChartRenderer] Wind bar drawn successfully');
   }
 
   // ============================================================================

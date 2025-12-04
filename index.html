@@ -7,19 +7,22 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-
+  <link rel="stylesheet" href="imagestyle.css">
+  
+  <!-- Load scripts with defer -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js" defer></script>
   <script src="input-validation.js" defer></script>
   <script src="tornado-calculations.js" defer></script>
   <script src="chart-renderer.js" defer></script>
+  <script src="imageprocess.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
   <main class="app">
     <header class="app-header">
-      <h1>Twisted Weather Analyzer</h1>
+      <h1>Twisted Tornado Probability Predictor</h1>
       <p class="subtitle">Enter parameters and analyze tornado morphology probability</p>
     </header>
 
@@ -52,8 +55,12 @@
                 <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
               </div>
               <div class="input-row">
-                <label for="STORM_SPEED" class="label-title">Storm Speed (mph)</label>
-                <input id="STORM_SPEED" type="number" step="0.1" min="0" max="200" placeholder="">
+                <label for="STP" class="label-title">STP</label>
+                <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="STORM_SPEED" class="label-title">Storm Motion (mph)</label>
+                <input id="STORM_SPEED" type="number" step="1" min="0" max="110" placeholder="">
               </div>
             </div>
 
@@ -79,13 +86,48 @@
                 <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
                 <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
               </div>
+              <div class="input-row">
+                <label for="VTP" class="label-title">VTP</label>
+                <input id="VTP" type="number" step="0.1" min="0" max="16" placeholder="">
+              </div>
             </div>
+          </div>
+
+          <!-- Image Upload Section with improved layout -->
+          <div class="upload-section">
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            
+            <!-- Buttons side by side -->
+            <div class="upload-buttons">
+              <button type="button" class="load-btn" onclick="document.getElementById('fileInput').click()">
+                Load Image
+              </button>
+              <button type="button" class="paste-btn" onclick="pasteFromClipboard()">
+                Paste Image
+              </button>
+            </div>
+            
+            <!-- Image Layout Tip -->
+            <div class="image-tip">
+              <div class="tip-header">Image Layout Tip</div>
+              <div class="tip-content">
+                <p><strong>For best OCR results, snip the thermos like this:</strong></p>
+                <div class="tip-image-container">
+                  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" 
+                       alt="Weather data layout example" 
+                       id="tipExampleImage" 
+                       class="tip-example-image">
+                </div>
+              </div>
+            </div>
+            
+            <div id="preview"></div>
+            <div id="ocrStatus"></div>
           </div>
 
           <div class="form-actions">
             <button id="analyze" type="button" class="btn primary">Analyze</button>
             <button id="reset" type="reset" class="btn ghost">Reset</button>
-            <button id="exportBtn" type="button" class="btn outline">Export PNG</button>
           </div>
           
           <!-- Validation warnings -->
@@ -103,72 +145,84 @@
           <div class="thermo-grid">
             <div class="stat-panel">
               <div class="stat-row">
-                <span class="k" data-desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
-                <span class="v" id="sum_TEMP">—</span><span class="unit">F</span>
+              <span class="k" data- desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
+              <span class="v" id="sum_TEMP">—</span><span class="unit">F</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="CAPE (Convective Available Potential Energy) is the measure of potential energy for thunderstorms to develop. Higher CAPE indicates stronger instability and higher potential for strong storms and tornadoes.">CAPE</span>
-                <span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span>
+              <span class="k" data-desc="CAPE (Convective Available Potential Energy) is the measure of potential energy for thunderstorms to develop. Higher CAPE indicates stronger instability and higher potential for strong storms and tornadoes.">CAPE</span>
+              <span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="0-3KM Lapse Rate: Temperature change per kilometer from the surface to 3 km. A steeper (larger) lapse rate indicates stronger low-level instability and contributes to tornado intensity and storm growth. Values up to ~10 C/km are possible on high-risk days.">0-3KM LAPSE</span>
-                <span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span>
+              <span class="k" data-desc="0-3KM Lapse Rate: Temperature change per kilometer from the surface to 3 km. A steeper (larger) lapse rate indicates stronger low-level instability and contributes to tornado intensity and storm growth. Values up to ~10 C/km are possible on high-risk days.">0-3KM LAPSE</span>
+              <span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="PWAT (Precipitable Water) is the total water vapor in a column of air. Higher PWAT increases potential for heavy rainfall, reduced visibility, larger hail, and rain-wrapped tornadoes. PWAT < 0.9 in usually lowers rainwrap chance; PWAT > 0.9 in increases it.">PWAT</span>
-                <span class="v" id="sum_PWAT">—</span><span class="unit">IN</span>
+              <span class="k" data-desc="PWAT (Precipitable Water) is the total water vapor in a column of air. Higher PWAT increases potential for heavy rainfall, reduced visibility, larger hail, and rain-wrapped tornadoes. PWAT < 0.9 in usually lowers rainwrap chance; PWAT > 0.9 in increases it.">PWAT</span>
+              <span class="v" id="sum_PWAT">—</span><span class="unit">IN</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="Surface Relative Humidity (RH) shows the moisture content near the ground. Higher surface RH supports storm development and intensification by keeping the boundary layer moist.">SURFACE RH</span>
-                <span class="v" id="sum_RH">—</span><span class="unit">%</span>
+              <span class="k" data-desc="Surface Relative Humidity (RH) shows the moisture content near the ground. Higher surface RH supports storm development and intensification by keeping the boundary layer moist.">SURFACE RH</span>
+              <span class="v" id="sum_RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="Significant Tornado Parameter combines instability (CAPE), shear (SRH), and moisture (PWAT). Higher STP indicates greater potential for significant tornadoes. Game range: 0-64. MRGL: 0-2, SLGT: 3-4, ENH: 5-6, MDT: 7-10, HIGH: 11+">STP</span>
+              <span class="v" id="sum_STP">—</span><span class="unit"></span>
               </div>
             </div>
 
             <div class="stat-panel">
               <div class="stat-row">
-                <span class="k" data-desc="Dew Point indicates the temperature at which air becomes saturated and water condenses. Higher dew points are crucial for storm development because they indicate available low-level moisture.">DEWPOINT</span>
-                <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
+              <span class="k" data-desc="Dew Point indicates the temperature at which air becomes saturated and water condenses. Higher dew points are crucial for storm development because they indicate available low-level moisture.">DEWPOINT</span>
+              <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="3CAPE (scaled) shows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
-                <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
+              <span class="k" data-desc="3CAPEshows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
+              <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE</span>
-                <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
+              <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE</span>
+              <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="SRH (Storm-Relative Helicity) measures how much the air within a storm is spinning relative to storm motion. High SRH is a major contributor to strong tornado potential because it reflects stronger low-level rotation.">SRH</span>
-                <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
+              <span class="k" data-desc="SRH (Storm-Relative Helicity) measures how much the air within a storm is spinning relative to storm motion. High SRH is a major contributor to strong tornado potential because it reflects stronger low-level rotation.">SRH</span>
+              <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
               </div>
               <div class="stat-row">
-                <span class="k" data-desc="700–500 mb RH (scaled) shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH</span>
-                <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
+              <span class="k" data-desc="700–500 mb RH shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH</span>
+              <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="Violent Tornado Parameter emphasizes extreme instability and low-level rotation. Higher VTP suggests potential for violent (EF4-EF5) tornadoes. Game range: 0-16. MRGL: 0-1, SLGT: 1, ENH: 1-2, MDT: 2, HIGH: 3+">VTP</span>
+              <span class="v" id="sum_VTP">—</span><span class="unit"></span>
               </div>
             </div>
           </div>
 
-          <div class="thermo-footer">
-            <div class="wind-left">
-              <div class="wind-label" id="windLabel">No estimate yet</div>
-              <div class="ef-label">EF Scale Estimate</div>
+          <!-- ADD THE WIND ESTIMATE SECTION BACK HERE -->
+          <div id="windEstimate" class="wind-estimate-section">
+            <div class="thermo-footer">
+              <div class="wind-left">
+                <div class="wind-label" id="windLabel">No estimate yet</div>
+                <div class="ef-label">EF Scale Estimate</div>
+              </div>
+              <div class="miniwrap">
+                <canvas id="miniWind" width="600" height="40" aria-hidden="true"></canvas>
+              </div>
             </div>
-            <div class="miniwrap">
-              <canvas id="miniWind" width="300" height="48" aria-hidden="true"></canvas>
+
+            <!-- Theoretical wind estimate -->
+            <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
+
+            <!-- Wind estimate disclaimer -->
+            <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+              <strong>Note:</strong> Wind speed estimates are approximate theoretical calculations based on atmospheric parameters. Actual tornado intensity can vary significantly based on local conditions, storm dynamics, and interaction effects not captured by this simplified model. These estimates should be interpreted as general guidance rather than precise predictions.
             </div>
+
+            <!-- Special factors -->
+            <div id="specialFactors" class="special-factors"></div>
           </div>
-
-          <!-- Theoretical wind estimate for extreme conditions - NOW FIRST -->
-          <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
-
-          <!-- Wind estimate disclaimer - NOW AFTER theoretical -->
-          <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
-            <strong>Note:</strong> Wind speed estimates are approximate theoretical calculations based on atmospheric parameters. Actual tornado intensity can vary significantly based on local conditions, storm dynamics, and interaction effects not captured by this simplified model. These estimates should be interpreted as general guidance rather than precise predictions.
-          </div>
-
-          <!-- Special factors will be rendered here, below the EF scale -->
-          <div id="specialFactors"></div>
         </div>
+        <!-- THIS CLOSES .thermo-card -->
 
         <div class="prob-card card glass" role="region" aria-label="Probability distribution">
           <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>

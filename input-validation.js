@@ -115,11 +115,6 @@
       warnings.push('WARNING: High CAPE with very cool temperature is highly unusual');
     }
     
-    // Check for mid-level RH inconsistencies
-    if (data.RH_MID > data.SURFACE_RH + 30 && data.SURFACE_RH > 0 && data.RH_MID > 0) {
-      warnings.push('WARNING: Mid-level RH much higher than surface RH - unusual atmospheric profile');
-    }
-    
     // Check for dry mid-levels with high surface moisture
     if (data.RH_MID < 40 && data.SURFACE_RH > 80) {
       warnings.push('WARNING: Very dry mid-levels with moist surface - strong capping likely');

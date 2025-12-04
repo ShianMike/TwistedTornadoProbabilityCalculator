@@ -506,7 +506,9 @@
    * MDT: STP 7-10, VTP 2
    * HIGH: STP 11+, VTP 3+
    */
-  function calculate_risk_level(data) {
+  // ...existing code...
+
+function calculate_risk_level(data) {
     // Get or calculate STP and VTP with PROPER CAPS
     let STP, VTP;
     if (data.STP !== undefined && data.STP !== null && data.STP !== '') {
@@ -528,7 +530,6 @@
     }
 
     // Determine risk level based on EXACT game thresholds
-    // Priority: VTP takes precedence for higher risks
     let risk, color;
     
     // HIGH RISK: STP 11+ OR VTP 3+
@@ -536,27 +537,27 @@
       risk = 'HIGH';
       color = '#e600ff';  // Magenta
     }
-    // MODERATE RISK: STP 7-10 OR VTP 2
-    else if ((STP >= 7 && STP < 11) || (VTP >= 2 && VTP < 3)) {
+    // MODERATE RISK: STP 7-10 OR (VTP 2 AND STP >= 7)
+    else if ((STP >= 7 && STP <= 10) || (VTP === 2 && STP >= 7)) {
       risk = 'MDT';
       color = '#ff0000';  // Red
     }
-    // ENHANCED RISK: STP 5-6 OR VTP 1-2
-    else if ((STP >= 5 && STP < 7) || (VTP >= 1 && VTP < 2)) {
+    // ENHANCED RISK: STP 5-6 (VTP 0, 1, or 2)
+    else if (STP >= 5 && STP <= 6) {
       risk = 'ENH';
       color = '#ff8c00';  // Orange
     }
-    // SLIGHT RISK: STP 3-4 OR VTP 1
-    else if ((STP >= 3 && STP < 5) || (VTP >= 1 && VTP < 2)) {
+    // SLIGHT RISK: STP 3-4 (VTP 0 or 1)
+    else if (STP >= 3 && STP <= 4) {
       risk = 'SLGT';
       color = '#ffff00';  // Yellow
     }
-    // MARGINAL RISK: STP 0-2 AND VTP 0-1
-    else if ((STP > 0 && STP < 3) || (VTP > 0 && VTP < 1)) {
+    // MARGINAL RISK: STP 1-2 (VTP 0 or 1)
+    else if (STP >= 1 && STP <= 2) {
       risk = 'MRGL';
       color = '#00ff00';  // Green
     }
-    // THUNDERSTORM: STP < 0.5 AND VTP < 0.5
+    // THUNDERSTORM: STP 0
     else {
       risk = 'TSTM';
       color = '#4d4dff';  // Blue
@@ -565,8 +566,8 @@
     return {
       risk: risk,
       color: color,
-      STP: Math.round(STP).toString(),  // Changed to whole number
-      VTP: Math.round(VTP).toString()   // Changed to whole number
+      STP: Math.round(STP).toString(),
+      VTP: Math.round(VTP).toString()
     };
   }
 

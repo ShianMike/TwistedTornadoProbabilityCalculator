@@ -96,24 +96,18 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmo
 - Version/License info condensed to single line footer
 - Overall 30% reduction in documentation length
 
-**New OCR Feature** ⭐
+**New OCR Feature**
 - Upload screenshots of Twisted thermodynamics panel
 - Automatic text extraction using Tesseract.js OCR engine
 - Recognizes parameter names and values
 - Auto-populates input fields with extracted data
 - Supports common screenshot formats (PNG, JPG, JPEG)
 - Saves time entering data manually
-- Paste images directly from clipboard
 
 **Removed PNG Export Feature**
 - Removed "Export PNG" functionality
-- Reduced bundle size by removing html2canvas dependency (~2MB smaller)
+- Reduced bundle size by removing html2canvas dependency
 - Streamlined interface with focus on analysis tools
-
-**No Wind Formula Changes**
-- Wind speed calculations remain unchanged from v1.4.5
-- All wind improvements (56% increase, 235-320 mph ranges, theoretical 500+ mph) are from v1.4.5
-- This version focuses on usability improvements only
 
 **What Remains:**
 - All feature descriptions and capabilities

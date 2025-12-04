@@ -36,6 +36,8 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmo
 
 - **Export Functionality** - Save analysis as PNG image
 
+- **OCR Auto-Fill** - Paste screenshot of the theromodynamics interface to auto-fill input fields (Ctrl+V)
+
 ## 🚀 Quick Start
 
 1. **Open the application**

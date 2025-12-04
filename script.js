@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Button references
   const analyzeBtn = get('analyze');
+  const autoFillBtn = get('ocr');
   const resetBtn = get('reset');
   const exportBtn = get('exportBtn');
 
@@ -792,6 +793,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+	/*
+	 * Perform OCR on uploaded image to auto-fill inputs
+	 * @param {File|boolean} isDialogInstance - File object or true to open file dialog
+	 */
+  function performOCR(isDialogInstance) {
+    let input = null;
+		renderEmptyProb();
+		drawMiniWind(miniCanvas, null);
+		[...ids, 'CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID'].forEach(id => {
+			const el = get(id);
+			if (el) el.value = '';
+		});
+		autoFillBtn.disabled = true;
+    autoFillBtn.textContent = 'Reading...';
+    if (isDialogInstance === true) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.png,.jpg,.jpeg,image/png,image/jpeg';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.click();
+
+      input.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (typeof Tesseract === 'undefined') {
+          alert('OCR engine (Tesseract.js) is not loaded. Please load Tesseract.js and try again.');
+          document.body.removeChild(input);
+          return;
+        }
+        await read(file, input);
+      });
+    } else {
+      read(isDialogInstance, input);
+    }
+    async function read(file, inputRef) {
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+          logger: m => {}
+        });
+        const lines = text.split('\n');
+				// OCR Likes to think it's "PHAT" for "PWAT" sometimes, so we'll allow that too lol
+				const paramMap = {
+					TEMP: /temp(?:erature)?[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					DEWPOINT: /dew[\s.]*p(?:o|0)?i?n?t[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					CAPE_3KM: /(?:3\s*km|3)\s*cape[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					CAPE: /(?<!3)(?:\s|^)cape[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					LAPSE_RATE_0_3: /(?:0|o)\s*[\-–—]\s*3\s*km\s*lapse[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					LAPSE_3_6KM: /3\s*[\-–—]\s*6\s*km\s*lapse[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					SRH: /srh[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					SURFACE_RH: /surface\s*rh[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					RH_MID: /(700\s*[\-–—]?\s*500\s*mb|mid)\s*rh[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					PWAT: /p[wh]at[\s.]*([0-9]+(?:\.[0-9]+)?)\s*in\b|p[wh]at[\s.]*([0-9]+(?:\.[0-9]+)?)/i,
+					STORM_SPEED: /([0-9]+)\s*mph/i
+				};
+        Object.entries(paramMap).forEach(([key, regex]) => {
+          for (const line of lines) {
+            const match = line.match(regex);
+            if (match) {
+              let val = match[2] || match[1];
+              if (typeof val === 'string') {
+                val = val.replace(/^[^\d\-\.]+/, '').replace(/[^\d\.]+$/, '');
+                val = val.replace(/^\.*/, '').replace(/(\..*)\./g, '$1');
+              }
+              const el = get(key);
+              if (el && val && !isNaN(Number(val))) el.value = val;
+              break;
+            }
+          }
+        });
+        performAnalysis();
+      } catch (err) {
+        alert('Failed to read image: ' + err.message);
+        console.error('[OCR] Error:', err);
+      } finally {
+        autoFillBtn.disabled = false;
+        autoFillBtn.textContent = 'Auto-Fill (Crtl+V)';
+        if (inputRef) {
+          document.body.removeChild(inputRef);
+        }
+      }
+    }
+  }
+
   // ============================================================================
   // SPECIAL FACTORS RENDERING
   // ============================================================================
@@ -1014,6 +1099,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 'image/png');
   }
 
+	/* 
+	 * Auto-Fill button click handler
+	 * Opens file dialog to select image for OCR
+	 */
+  if (autoFillBtn) {
+    autoFillBtn.addEventListener('click', (e) => {
+      console.log('[Auto-Fill] Auto-Fill button called');
+			performOCR(true);
+    });
+  }
+
+
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
@@ -1129,6 +1226,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     window.addEventListener('scroll', hideTip, true);
     window.addEventListener('resize', hideTip);
+
+		// Paste event listener for auto-fill via clipboard image
+		window.addEventListener('paste', (e) => {
+			const clipboard = e.clipboardData || window.clipboardData;
+			if (!clipboard || !clipboard.items) return;
+			const imageItem = Array.from(clipboard.items).find(item =>
+			item.kind === 'file' && /^image\/(png|jpeg|jpg)$/.test(item.type)
+			);
+			if (imageItem) {
+				const file = imageItem.getAsFile();
+				if (file) {
+					console.log('[Auto-Fill] Image pasted from clipboard, starting OCR...');
+					autoFillBtn && (autoFillBtn.disabled = true);
+					performOCR(file);
+					e.preventDefault();
+				}
+			}
+		});
   })();
   
   // Run initialization

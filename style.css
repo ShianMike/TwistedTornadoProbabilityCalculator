@@ -7,6 +7,22 @@
   font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial;
 }
 
+/* Remove full-bleed gradient; use single solid background color */
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg); /* solid background */
+  color: #e6eef6;
+}
+
+/* Ensure .app uses a translucent background so the UI remains readable */
+.app {
+  background: rgba(24,28,47,0.90); /* slightly more opaque over solid bg */
+  border-radius: 18px;
+  box-shadow: 0 12px 48px rgba(38,198,218,0.10), 0 2px 8px rgba(0,0,0,0.18);
+  padding: 32px 28px;
+}
+
 /* base reset */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
@@ -30,6 +46,18 @@ html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
   padding:16px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.6);
   min-width:0;
+}
+
+/* Card glassmorphism effect and depth */
+.card {
+  background: linear-gradient(120deg, rgba(38,198,218,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  box-shadow: 0 8px 32px rgba(38,198,218,0.08), 0 2px 8px rgba(0,0,0,0.18);
+  border-radius: 18px;
+  border: 1px solid rgba(38,198,218,0.10);
+  transition: box-shadow 0.2s;
+}
+.card:hover {
+  box-shadow: 0 16px 48px rgba(38,198,218,0.18), 0 4px 16px rgba(0,0,0,0.22);
 }
 
 /* left column form - BACK TO ORIGINAL SIZE */
@@ -96,6 +124,26 @@ input:focus{
   outline:2px solid rgba(38,198,218,0.18);
   outline-offset:2px;
   background:rgba(255,255,255,0.03);
+}
+
+/* Button styles: gradient, shadow, hover */
+.btn.primary {
+  background: linear-gradient(90deg, #1e88e5 0%, #26c6da 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(38,198,218,0.12);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.btn.primary:hover {
+  background: linear-gradient(90deg, #26c6da 0%, #1e88e5 100%);
+  box-shadow: 0 4px 16px rgba(38,198,218,0.18);
+}
+.btn.ghost, .btn.outline {
+  /* ...existing code... */
+  transition: border 0.2s, color 0.2s;
+}
+.btn.ghost:hover, .btn.outline:hover {
+  border-color: #26c6da;
+  color: #26c6da;
 }
 
 /* actions */
@@ -269,6 +317,8 @@ input:focus{
   width: 100%;
   height: 20px; /* Increased from 16px for better visibility */
   border-radius: 4px; /* Slightly larger radius */
+  box-shadow: 0 2px 8px rgba(38,198,218,0.10);
+  background: linear-gradient(90deg, #232a3b 0%, #181c2f 100%);
 }
 
 /* Special factors styling */
@@ -643,4 +693,9 @@ canvas{display:block;width:100% !important;height:auto !important;pointer-events
   vertical-align: middle;
   white-space: nowrap;
   flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Add smooth transitions to cards and interactive elements */
+.card, .btn, input, .stat-tooltip, .tornado-tooltip, .special-factors, #specialFactors, .theoretical-wind, #theoreticalWind, #riskBadge {
+  transition: box-shadow 0.2s, background 0.2s, border 0.2s, color 0.2s;
 }

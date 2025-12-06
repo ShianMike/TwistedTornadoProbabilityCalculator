@@ -16,10 +16,36 @@
     'SIDEWINDER': 'Rotational, narrow tornado often with long track. Dominated by strong low-level rotation (SRH) and storm speed.',
     'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
     'WEDGE': 'Wide, rain-fed tornado with broad circulation. Driven by low-level moisture and moderate CAPE. Often rain-wrapped and slow-moving.',
-    'DRILLBIT': 'Thin, tight tornado in dry, fast-moving storms. Often associated with high storm speed and low-level drying.',
+    'DRILLBIT': 'Fast-moving tornado in dry environment. Thin to moderate circulation with high storm speed and low moisture. Includes both grounded fast tornadoes and rotating funnels aloft. Often associated with dry lines and strong wind shear.',
     'CONE': 'Classic mid-range tornado with balanced morphology. Moderately intense with moderate rotation and CAPE.',
     'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
   };
+
+  // ============================================================================
+  // TORNADO TYPE DISPLAY NAMES
+  // ============================================================================
+  
+  /**
+   * Map internal type keys to display names
+   * Used for showing "DRILLBIT/FUNNEL" in the UI while keeping "DRILLBIT" as the internal key
+   */
+  const tornadoDisplayNames = {
+    'SIDEWINDER': 'SIDEWINDER',
+    'STOVEPIPE': 'STOVEPIPE',
+    'WEDGE': 'WEDGE',
+    'DRILLBIT': 'DRILLBIT/FUNNEL',  // Display name includes /FUNNEL
+    'CONE': 'CONE',
+    'ROPE': 'ROPE'
+  };
+
+  /**
+   * Get display name for a tornado type
+   * @param {string} type - Internal tornado type key
+   * @returns {string} Display name
+   */
+  function getDisplayName(type) {
+    return tornadoDisplayNames[type] || type;
+  }
 
   // ============================================================================
   // CHART.JS PLUGIN REGISTRATION
@@ -239,16 +265,37 @@
     const midY = height / 2;
 
     // Speed range label with modern font sizing
-    ctx.font = '600 15px Inter, sans-serif'; /* Slightly larger and semi-bold */
+    ctx.font = '600 15px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.letterSpacing = '-0.02em';
     
     const centerX = (minPos + maxPos) / 2;
     const rangeText = `${estimate.est_min}-${estimate.est_max} mph`;
     
-    // Show if there's enough space
-    if ((maxPos - minPos) > 100) {
+    // Show if there's enough space - REDUCED threshold from 100 to 60
+    if ((maxPos - minPos) > 60) {
       ctx.fillText(rangeText, centerX, midY);
+    } else if ((maxPos - minPos) > 40) {
+      // For narrower ranges, use smaller font
+      ctx.font = '600 13px Inter, sans-serif';
+      ctx.fillText(rangeText, centerX, midY);
+    } else if ((maxPos - minPos) > 20) {
+      // For very narrow ranges, use even smaller font
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.fillText(rangeText, centerX, midY);
+    }
+
+    // Add thermal wind indicator if present and significant
+    if (estimate.thermalContribution && estimate.thermalContribution > 5) {
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.fillStyle = '#fbbf24'; // Yellow indicator
+      const THERMAL_GAMMA_ADJUSTED = 0.6;
+      const thermalText = `+${Math.round(estimate.thermalContribution * THERMAL_GAMMA_ADJUSTED)} mph thermal`;
+      
+      // Position below main text if space allows
+      if (height > 30 && (maxPos - minPos) > 50) {
+        ctx.fillText(thermalText, centerX, midY + 12);
+      }
     }
 
     ctx.restore();
@@ -263,6 +310,8 @@
   // Export functions to global scope
   window.ChartRenderer = {
     tornadoDescriptions,
+    tornadoDisplayNames,
+    getDisplayName,  // NEW: Export the display name function
     tryRegisterDataLabels,
     colorForValue,
     roundRect,

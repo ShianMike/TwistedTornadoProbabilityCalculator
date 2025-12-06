@@ -437,8 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     tryRegisterDataLabels();
 
-    // Extract labels and values
-    const labels = dataArr.map(d => d.Type);
+    // Extract labels and values - USE DISPLAY NAMES
+    const labels = dataArr.map(d => {
+      // Map internal key to display name (DRILLBIT -> DRILLBIT/FUNNEL)
+      return window.ChartRenderer ? window.ChartRenderer.getDisplayName(d.Type) : d.Type;
+    });
     const values = dataArr.map(d => d.Prob);
     
     if (!values.length) {

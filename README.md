@@ -1,8 +1,8 @@
-# Twisted Thermos Analyzer v2.0.0
+# Twisted Thermos Analyzer v2.1
 
 A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmospheric parameters to predict tornado morphology types and estimate wind speeds.
 
-![Twisted Thermos Analyzer](https://img.shields.io/badge/version-2.0.0-blue)
+![Twisted Thermos Analyzer](https://img.shields.io/badge/version-2.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 🌪️ Features
@@ -73,6 +73,37 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmo
 - **700-500mb RH** (%) - Mid-level relative humidity
 
 ## 📝 What's New
+
+## v2.1 — Patch Notes
+
+- Model & Data
+  - Retrained and recalibrated wind-estimation model on the expanded dataset (now 39 events).
+  - Adjusted normalization and component weights; baseline/re-scaling tuned to observed range (137–373 mph).
+  - Added targeted bonuses for extreme CAPE, SRH, lapse rates and storm speed to reflect observed extremes.
+  - Integrated a thermal-wind proxy (surface finite-difference / estimated gradients) that contributes to wind estimates.
+
+- Tornado Types & Scoring
+  - Merged the old FUNNEL behavior into DRILLBIT (internal key: "DRILLBIT"); display label shows as "DRILLBIT/FUNNEL".
+  - Tuned scoring across all types (SIDEWINDER, STOVEPIPE, WEDGE, CONE, ROPE, DRILLBIT) to better match in-game behaviors.
+  - Improved multiple-vortex logic to allow realistic occurrences under moderate SRH/CAPE (not only extreme VTP).
+
+- Visualization & UI
+  - Chart labels use a display-name mapping so internal keys remain stable while UI shows "DRILLBIT/FUNNEL".
+  - Mini wind bar renderer updated to always render numeric estimates (adaptive font sizing for narrow bars).
+  - Theoretical maximum display logic tightened and made more selective.
+  - Storm Motion input capped to 110 mph for realistic input validation.
+  - Exported ChartRenderer.getDisplayName() for reuse in chart rendering.
+
+- Styling & UX
+  - Modernized UI: glassy cards, improved buttons, input focus effects, and refined spacing.
+  - Removed full-bleed background gradient per preference; switched to a solid background and adjusted app translucency.
+  - Added subtle shadows and transitions to improve visual polish.
+
+- Misc / Implementation
+  - Added improved display of special factors (Rain-Wrapped, Large Hail, Multiple Vortices, Dust Vortices, Long-Track, Frequent Lightning).
+  - Kept internal keys stable for calculations (e.g., "DRILLBIT"), while providing friendly display names in the UI.
+  - Small bugfixes: ensured percent column rendering aligns with chart bars and improved tooltip behavior.
+
 
 ### v2.0.0 - Documentation Overhaul & OCR Feature
 
@@ -275,5 +306,6 @@ This tool is designed for the **Twisted weather simulation game** and should **N
 ---
 
 **Version:** 2.0.0 | **License:** MIT
+
 
 

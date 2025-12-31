@@ -13,12 +13,14 @@
   
   // Detailed descriptions for tooltip display
   const tornadoDescriptions = {
-    'SIDEWINDER': 'Rotational, narrow tornado often with long track. Dominated by strong low-level rotation (SRH) and storm speed.',
-    'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
-    'WEDGE': 'Wide, rain-fed tornado with broad circulation. Driven by low-level moisture and moderate CAPE. Often rain-wrapped and slow-moving.',
-    'DRILLBIT': 'Fast-moving tornado in dry environment. Thin to moderate circulation with high storm speed and low moisture. Includes both grounded fast tornadoes and rotating funnels aloft. Often associated with dry lines and strong wind shear.',
-    'CONE': 'Classic mid-range tornado with balanced morphology. Moderately intense with moderate rotation and CAPE.',
-    'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
+    'ROPE': 'Thin, weak tornado often in marginal conditions. Low CAPE, weak rotation, dissipating stage of supercells.',
+    'CONE': 'Classic tornado funnel shape. Balanced atmospheric conditions with moderate instability and rotation.',
+    'STOVE': 'Cylindrical, strong tornado (stovepipe shape). High instability, strong rotation, steep lapse rates.',
+    'WEDGE': 'Very wide tornado, often violent (>0.5 mile wide). High moisture, slow storm motion, extreme conditions.',
+    'FUNNEL': 'Funnel cloud with brief ground contact. Moderate rotation, transient touchdowns, fast-moving systems.',
+    'DRILLBIT': 'Fast-moving, narrow tornado in dry environment. High storm speed, low moisture, dry line conditions.',
+    'SIDEWINDER': 'Rotational narrow tornado in cold/dry environments. Strong rotation, low temperature, dry air.',
+    'FUNNEL_MULTI_VORTEX': 'Funnel with multiple circulation centers. Most intense type with extreme rotation and conditions.'
   };
 
   // ============================================================================
@@ -27,15 +29,17 @@
   
   /**
    * Map internal type keys to display names
-   * Used for showing "DRILLBIT/FUNNEL" in the UI while keeping "DRILLBIT" as the internal key
+   * Used for consistent display across the UI
    */
   const tornadoDisplayNames = {
-    'SIDEWINDER': 'SIDEWINDER',
-    'STOVEPIPE': 'STOVEPIPE',
+    'ROPE': 'ROPE',
+    'CONE': 'CONE', 
+    'STOVE': 'STOVE',
     'WEDGE': 'WEDGE',
-    'DRILLBIT': 'DRILLBIT/FUNNEL',  // Display name includes /FUNNEL
-    'CONE': 'CONE',
-    'ROPE': 'ROPE'
+    'FUNNEL': 'FUNNEL',
+    'DRILLBIT': 'DRILLBIT',
+    'SIDEWINDER': 'SIDEWINDER',
+    'FUNNEL_MULTI_VORTEX': 'FUNNEL W/ MULTI VORTEX'
   };
 
   /**

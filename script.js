@@ -72,12 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Define acceptable ranges for each parameter
     const limits = {
-      TEMP: {min:30, max:140},              // Temperature (F)
-      DEWPOINT: {min:30, max:120},          // Dewpoint (F)
+      TEMP: {min:15, max:140},              // Temperature (F)
+      DEWPOINT: {min:15, max:120},          // Dewpoint (F)
       CAPE: {min:0, max:10226},             // Convective Available Potential Energy (J/kg)
       LAPSE_RATE_0_3: {min:0, max:12},      // 0-3km lapse rate (C/km)
       SURFACE_RH: {min:0, max:100},         // Surface relative humidity (%)
-      PWAT: {min:0.5, max:2.5},             // Precipitable water (inches)
+      PWAT: {min:0.1, max:2.5},             // Precipitable water (inches)
       SRH: {min:0, max:1000},               // Storm-relative helicity (m²/s²)
       STORM_SPEED: {min:0, max:200},        // Storm motion speed (mph)
       CAPE_3KM: {min:0, max:300},           // 3km CAPE (J/kg)

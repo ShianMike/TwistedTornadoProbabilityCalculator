@@ -108,6 +108,7 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Uses machine 
 - **Cross-Validation** - robust model performance on held-out data
 - **Uncertainty Quantification** - realistic wind speed ranges with confidence intervals
 - **Fallback Logic** - intelligent defaults prevent unrealistic predictions
+- **Validation Consistency** - all input ranges now match between form inputs, validation logic, and documentation
 
 ### 🎯 Validation & Accuracy
 - **Real-World Validation** - tested against actual tornado outcomes

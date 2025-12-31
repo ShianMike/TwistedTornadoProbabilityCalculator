@@ -1,32 +1,37 @@
-# Twisted Thermos Analyzer v2.1
+# Twisted Thermos Analyzer v3.0
 
-A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmospheric parameters to predict tornado morphology types and estimate wind speeds.
+A web-based tornado analysis tool for the Roblox Game **Twisted**. Uses machine learning trained on 121 real tornado events to predict tornado morphology types and estimate wind speeds with thermal wind calculations.
 
-![Twisted Thermos Analyzer](https://img.shields.io/badge/version-2.1-blue)
+![Twisted Thermos Analyzer](https://img.shields.io/badge/version-3.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![ML Model](https://img.shields.io/badge/ML%20Model-Random%20Forest-orange)
+![Training Data](https://img.shields.io/badge/Training%20Data-121%20Events-green)
 
 ## 🌪️ Features
 
-- **Tornado Morphology Prediction** - Calculates probability distribution for 6 tornado types:
-  - Sidewinder (rotational, narrow)
-  - Stovepipe (violent, tight core)
-  - Wedge (wide, rain-wrapped)
-  - Drillbit (thin, fast-moving)
-  - Cone (classic, balanced)
-  - Rope (weak, decaying)
+- **Tornado Morphology Prediction** - Calculates probability distribution for 8 tornado types:
+  - Rope (thin, weak tornadoes)
+  - Cone (classic funnel shape)
+  - Stove (cylindrical, strong tornadoes)
+  - Wedge (wide, often violent)
+  - Funnel (brief ground contact)
+  - Drillbit (fast-moving, narrow)
+  - Sidewinder (rotational, cold environments)
+  - Funnel w/ Multi Vortex (multiple circulation centers)
 
-- **Wind Speed Estimation** - Enhanced Fujita (EF) scale estimates based on:
-  - CAPE (Convective Available Potential Energy)
-  - SRH (Storm-Relative Helicity)
-  - Lapse rates (0-3km and 3-6km)
-  - Moisture parameters (PWAT, RH)
+- **Machine Learning Wind Estimation** - Random Forest model (R² = 0.426) trained on 121 events:
+  - Feature importance: CAPE (16.5%), STP (15.6%), TVS Peaks (14.3%)
+  - Thermal wind proxy calculations from temperature gradients
+  - Enhanced Fujita (EF) scale estimates with uncertainty ranges
+  - Realistic caps based on observed tornado data (137-380 mph)
 
 - **Special Factors Analysis** - Identifies additional hazards:
   - Rain-wrap probability
   - Large hail potential
-  - Multiple vortices
+  - Multiple vortices (realistic thresholds)
+  - Dust field conditions
+  - Long-track tornado potential
   - Frequent lightning
-  - Low visibility conditions
 
 - **Interactive Visualizations**
   - Horizontal bar chart with color-coded probabilities
@@ -73,6 +78,42 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Analyzes atmo
 - **700-500mb RH** (%) - Mid-level relative humidity
 
 ## 📝 What's New
+
+## v3.0 — Machine Learning & Accuracy Revolution
+
+### 🧠 Machine Learning Integration
+- **Trained Random Forest Model** on 121 real tornado events from CSV data
+- **R² = 0.426** explaining 42.6% of wind speed variance
+- **Feature Importance Analysis**: CAPE (16.5%), STP (15.6%), TVS Peaks (14.3%), 3CAPE (14.2%), Lapse Rate (8.9%)
+- **Thermal Wind Proxy** calculations from temperature gradients add physical realism
+- **ML-Derived Weights** replace previous heuristic scoring
+
+### 🌪️ Tornado Classification Overhaul
+- **8 Tornado Types** matching exact game classifications
+- **Reformed Scoring System** based on meteorological research and ML insights
+- **ROPE Prediction Fixed** - eliminated false 50% probability in extreme conditions
+- **Extreme Condition Logic** - CAPE > 6000 + SRH > 500 scenarios now properly predict 0% ROPE
+- **Realistic Morphology** based on actual tornado science and damage patterns
+
+### 📊 Enhanced Atmospheric Analysis
+- **Expanded Temperature Range** - now supports cold weather (15-140°F)
+- **Lower PWAT Minimum** - down to 0.1" for dry scenarios
+- **Dust Field Factor** - new special factor for dry, windy conditions
+- **Improved Multiple Vortex Logic** - realistic thresholds (SRH > 300 + CAPE > 2000)
+- **Cold Weather Support** - Sidewinder tornadoes in sub-freezing conditions
+
+### 🔬 Technical Improvements
+- **Python Training Pipeline** - tornado_model_trainer.py for ML model development
+- **Feature Engineering** - TVS proxy calculations from atmospheric parameters
+- **Cross-Validation** - robust model performance on held-out data
+- **Uncertainty Quantification** - realistic wind speed ranges with confidence intervals
+- **Fallback Logic** - intelligent defaults prevent unrealistic predictions
+
+### 🎯 Validation & Accuracy
+- **Real-World Validation** - tested against actual tornado outcomes
+- **Extreme Scenario Tuning** - high CAPE/SRH combinations now predict correctly
+- **Penalty/Bonus Systems** - refined scoring prevents over-prediction of weak tornadoes
+- **Meteorologically Consistent** - tornado types match real-world atmospheric triggers
 
 ## v2.1 — Patch Notes
 
@@ -305,7 +346,7 @@ This tool is designed for the **Twisted weather simulation game** and should **N
 
 ---
 
-**Version:** 2.0.0 | **License:** MIT
+**Version:** 3.0.0 | **License:** MIT | **ML Model:** Random Forest (R² = 0.426)
 
 
 

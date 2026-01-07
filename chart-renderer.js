@@ -15,12 +15,11 @@
   const tornadoDescriptions = {
     'ROPE': 'Thin, weak tornado often in marginal conditions. Low CAPE, weak rotation, dissipating stage of supercells.',
     'CONE': 'Classic tornado funnel shape. Balanced atmospheric conditions with moderate instability and rotation.',
-    'STOVE': 'Cylindrical, strong tornado (stovepipe shape). High instability, strong rotation, steep lapse rates.',
+    'STOVEPIPE': 'Cylindrical, strong tornado (stovepipe shape). High instability, strong rotation, steep lapse rates.',
     'WEDGE': 'Very wide tornado, often violent (>0.5 mile wide). High moisture, slow storm motion, extreme conditions.',
     'FUNNEL': 'Funnel cloud with brief ground contact. Moderate rotation, transient touchdowns, fast-moving systems.',
     'DRILLBIT': 'Fast-moving, narrow tornado in dry environment. High storm speed, low moisture, dry line conditions.',
-    'SIDEWINDER': 'Rotational narrow tornado in cold/dry environments. Strong rotation, low temperature, dry air.',
-    'FUNNEL_MULTI_VORTEX': 'Funnel with multiple circulation centers. Most intense type with extreme rotation and conditions.'
+    'SIDEWINDER': 'Rotational narrow tornado in cold/dry environments. Strong rotation, low temperature, dry air.'
   };
 
   // ============================================================================
@@ -34,12 +33,11 @@
   const tornadoDisplayNames = {
     'ROPE': 'ROPE',
     'CONE': 'CONE', 
-    'STOVE': 'STOVE',
+    'STOVEPIPE': 'STOVEPIPE',
     'WEDGE': 'WEDGE',
     'FUNNEL': 'FUNNEL',
     'DRILLBIT': 'DRILLBIT',
-    'SIDEWINDER': 'SIDEWINDER',
-    'FUNNEL_MULTI_VORTEX': 'FUNNEL W/ MULTI VORTEX'
+    'SIDEWINDER': 'SIDEWINDER'
   };
 
   /**
@@ -168,11 +166,35 @@
     console.log('[ChartRenderer] Drawing wind bar with estimate:', estimate);
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
-    const width = canvas.width;
-    const height = canvas.height;
+    
+    // Get the device pixel ratio for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    
+    // Set the display size if different from current
+    if (canvas.style.width !== rect.width + 'px') {
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+    }
+    
+    // Set the actual size in memory (scaled for the device pixel ratio)
+    const width = rect.width * dpr;
+    const height = rect.height * dpr;
+    
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Scale the drawing context so everything draws at the correct size
+      ctx.scale(dpr, dpr);
+    }
+    
+    // Use display dimensions for calculations
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
 
     // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
 
     // Realistic EF Scale colors with pink for 200+ mph
     const efColors = [
@@ -189,20 +211,22 @@
     ];
 
     const maxMph = 400;
-    const minPos = (estimate.est_min / maxMph) * width;
-    const maxPos = (estimate.est_max / maxMph) * width;
+    const minPos = (estimate.est_min / maxMph) * displayWidth;
+    const maxPos = (estimate.est_max / maxMph) * displayWidth;
 
     // Create gradient
-    const bgGradient = ctx.createLinearGradient(0, 0, width, 0);
+    const bgGradient = ctx.createLinearGradient(0, 0, displayWidth, 0);
     efColors.forEach(ef => {
       bgGradient.addColorStop(ef.mph / maxMph, ef.color);
     });
 
-    // Draw main bar with modern radius
+    // Draw main bar with modern radius - positioned lower to make room for text
     const radius = 6; /* Increased from 4 for modern look */
+    const barTop = 12; // Start bar lower to make room for text
+    const barHeight = displayHeight - barTop - 2;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, radius);
+    ctx.roundRect(0, barTop, displayWidth, barHeight, radius);
     ctx.fillStyle = bgGradient;
     ctx.fill();
     ctx.restore();
@@ -214,13 +238,13 @@
     
     if (minPos > 2) {
       ctx.beginPath();
-      ctx.roundRect(0, 0, minPos, height, [radius, 0, 0, radius]);
+      ctx.roundRect(0, barTop, minPos, barHeight, [radius, 0, 0, radius]);
       ctx.fill();
     }
     
-    if (maxPos < width - 2) {
+    if (maxPos < displayWidth - 2) {
       ctx.beginPath();
-      ctx.roundRect(maxPos, 0, width - maxPos, height, [0, radius, radius, 0]);
+      ctx.roundRect(maxPos, barTop, displayWidth - maxPos, barHeight, [0, radius, radius, 0]);
       ctx.fill();
     }
     ctx.restore();
@@ -230,10 +254,10 @@
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 1;
     [65, 86, 111, 136, 166, 200].forEach(mph => {
-      const x = Math.round((mph / maxMph) * width);
+      const x = Math.round((mph / maxMph) * displayWidth);
       ctx.beginPath();
-      ctx.moveTo(x, 2);
-      ctx.lineTo(x, height - 2);
+      ctx.moveTo(x, barTop + 2);
+      ctx.lineTo(x, displayHeight - 2);
       ctx.stroke();
     });
     ctx.restore();
@@ -245,60 +269,59 @@
     ctx.lineCap = 'round'; /* Rounded ends for modern look */
     
     ctx.beginPath();
-    ctx.moveTo(Math.round(minPos), 2);
-    ctx.lineTo(Math.round(minPos), height - 2);
+    ctx.moveTo(Math.round(minPos), barTop + 2);
+    ctx.lineTo(Math.round(minPos), displayHeight - 2);
     ctx.stroke();
     
     ctx.beginPath();
-    ctx.moveTo(Math.round(maxPos), 2);
-    ctx.lineTo(Math.round(maxPos), height - 2);
+    ctx.moveTo(Math.round(maxPos), barTop + 2);
+    ctx.lineTo(Math.round(maxPos), displayHeight - 2);
     ctx.stroke();
     ctx.restore();
 
-    // TEXT RENDERING - Modern typography
+    // TEXT RENDERING - Modern typography positioned above the bar
     ctx.save();
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'top'; // Position text from top
     ctx.fillStyle = '#ffffff';
     
     // Strong shadow for text visibility
     ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 5;
+    ctx.shadowBlur = 3;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 1;
 
-    const midY = height / 2;
-
-    // Speed range label with modern font sizing
-    ctx.font = '600 15px Inter, sans-serif';
-    ctx.textAlign = 'center';
+    // Speed range labels positioned in upper portion of canvas
+    ctx.font = '600 12px Inter, sans-serif'; // Increased by 2px
     ctx.letterSpacing = '-0.02em';
     
-    const centerX = (minPos + maxPos) / 2;
-    const rangeText = `${estimate.est_min}-${estimate.est_max} mph`;
+    // Min wind label (left-aligned above min position)
+    ctx.textAlign = 'left';
+    const minText = `${estimate.est_min}`;
+    ctx.fillText(minText, minPos, 1); // Position near top
     
-    // Show if there's enough space - REDUCED threshold from 100 to 60
-    if ((maxPos - minPos) > 60) {
-      ctx.fillText(rangeText, centerX, midY);
-    } else if ((maxPos - minPos) > 40) {
-      // For narrower ranges, use smaller font
-      ctx.font = '600 13px Inter, sans-serif';
-      ctx.fillText(rangeText, centerX, midY);
-    } else if ((maxPos - minPos) > 20) {
-      // For very narrow ranges, use even smaller font
-      ctx.font = '500 11px Inter, sans-serif';
-      ctx.fillText(rangeText, centerX, midY);
-    }
+    // Max wind label (right-aligned above max position)  
+    ctx.textAlign = 'right';
+    const maxText = `${estimate.est_max}`;
+    ctx.fillText(maxText, maxPos, 1); // Position near top
+    
+    // MPH label in center
+    ctx.textAlign = 'center';
+    ctx.font = '400 10px Inter, sans-serif'; // Increased by 2px
+    const centerX = (minPos + maxPos) / 2;
+    ctx.fillText('mph', centerX, 1);
 
     // Add thermal wind indicator if present and significant
     if (estimate.thermalContribution && estimate.thermalContribution > 5) {
-      ctx.font = '500 11px Inter, sans-serif';
+      ctx.font = '500 9px Inter, sans-serif'; // Increased by 2px
       ctx.fillStyle = '#fbbf24'; // Yellow indicator
+      ctx.textAlign = 'center';
       const THERMAL_GAMMA_ADJUSTED = 0.6;
-      const thermalText = `+${Math.round(estimate.thermalContribution * THERMAL_GAMMA_ADJUSTED)} mph thermal`;
+      const thermalText = `+${Math.round(estimate.thermalContribution * THERMAL_GAMMA_ADJUSTED)}th`;
       
-      // Position below main text if space allows
-      if (height > 30 && (maxPos - minPos) > 50) {
-        ctx.fillText(thermalText, centerX, midY + 12);
+      // Position on right side if space allows
+      if (displayWidth > 400) {
+        ctx.textAlign = 'right';
+        ctx.fillText(thermalText, displayWidth - 5, 1);
       }
     }
 

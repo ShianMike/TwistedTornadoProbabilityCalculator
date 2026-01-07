@@ -159,11 +159,10 @@
     let scores = {
       ROPE: 0,              // Thin, weak tornadoes
       CONE: 0,              // Classic funnel shape
-      STOVE: 0,             // Stovepipe tornadoes
+      STOVEPIPE: 0,         // Stovepipe tornadoes
       WEDGE: 0,             // Wide tornadoes
       FUNNEL: 0,            // Funnel clouds/brief touchdowns
       DRILLBIT: 0,          // Fast-moving, narrow tornadoes
-      FUNNEL_MULTI_VORTEX: 0, // Funnel with multiple vortices
       SIDEWINDER: 0         // Rotational, narrow tornadoes in cold/dry environments
     };
 
@@ -264,44 +263,28 @@
     // Fast-moving, moderate instability favors funnels
     if (STORM_SPEED > 65 && CAPE > 2500 && VTP < 6) scores.FUNNEL += 25;
 
-    // FUNNEL WITH MULTI-VORTEX: Funnels with multiple circulation centers
-    // Characteristics: High rotation, extreme conditions, multiple vortices
-    // Most intense and destructive type in the game
-    if (VTP > 8) scores.FUNNEL_MULTI_VORTEX += 45;
-    if (VTP > 11) scores.FUNNEL_MULTI_VORTEX += 35;
-    if (SRH > 600) scores.FUNNEL_MULTI_VORTEX += 40;
-    if (SRH > 750) scores.FUNNEL_MULTI_VORTEX += 30;
-    if (CAPE > 5000) scores.FUNNEL_MULTI_VORTEX += 35;
-    if (CAPE > 6500) scores.FUNNEL_MULTI_VORTEX += 25;
-    if (STP > 20) scores.FUNNEL_MULTI_VORTEX += 30;
-    if (LAPSE_RATE_0_3 > 9) scores.FUNNEL_MULTI_VORTEX += 25;
-    // Extreme conditions required for multi-vortex
-    if (VTP > 10 && SRH > 700 && CAPE > 5500) scores.FUNNEL_MULTI_VORTEX += 50;
-    // Penalties if conditions not extreme enough
-    if (VTP < 6 || SRH < 450) scores.FUNNEL_MULTI_VORTEX -= 40;
-
-    // STOVE TORNADOES: Cylindrical, strong tornadoes (stovepipe shape)
+    // STOVEPIPE TORNADOES: Cylindrical, strong tornadoes (stovepipe shape)
     // Characteristics: High instability, strong rotation, steep lapse rates
     // Often associated with violent supercells
-    if (VTP > 6) scores.STOVE += 45;
-    if (VTP > 9) scores.STOVE += 35;
-    if (LAPSE_RATE_0_3 > 8.5) scores.STOVE += 40;
-    if (LAPSE_RATE_0_3 > 9.5) scores.STOVE += 30;
-    if (CAPE > 4000) scores.STOVE += 35;
-    if (CAPE > 5500) scores.STOVE += 25;
-    if (CAPE > 6500) scores.STOVE += 30;             // Very high CAPE bonus
-    if (SRH > 400) scores.STOVE += 30;
-    if (SRH > 600) scores.STOVE += 20;
-    if (STP > 15) scores.STOVE += 25;
-    if (STP > 18) scores.STOVE += 20;                // High STP bonus
-    if (CAPE_3KM > 100) scores.STOVE += 15;
-    if (PWAT > 1.0 && PWAT < 1.7) scores.STOVE += 15;
+    if (VTP > 6) scores.STOVEPIPE += 45;
+    if (VTP > 9) scores.STOVEPIPE += 35;
+    if (LAPSE_RATE_0_3 > 8.5) scores.STOVEPIPE += 40;
+    if (LAPSE_RATE_0_3 > 9.5) scores.STOVEPIPE += 30;
+    if (CAPE > 4000) scores.STOVEPIPE += 35;
+    if (CAPE > 5500) scores.STOVEPIPE += 25;
+    if (CAPE > 6500) scores.STOVEPIPE += 30;             // Very high CAPE bonus
+    if (SRH > 400) scores.STOVEPIPE += 30;
+    if (SRH > 600) scores.STOVEPIPE += 20;
+    if (STP > 15) scores.STOVEPIPE += 25;
+    if (STP > 18) scores.STOVEPIPE += 20;                // High STP bonus
+    if (CAPE_3KM > 100) scores.STOVEPIPE += 15;
+    if (PWAT > 1.0 && PWAT < 1.7) scores.STOVEPIPE += 15;
     // High rotation + instability combination
-    if (VTP > 7 && SRH > 500 && CAPE > 4500) scores.STOVE += 30;
+    if (VTP > 7 && SRH > 500 && CAPE > 4500) scores.STOVEPIPE += 30;
     // Very high instability scenario (like yours)
-    if (CAPE > 6000 && SRH > 500) scores.STOVE += 35;
+    if (CAPE > 6000 && SRH > 500) scores.STOVEPIPE += 35;
     // Penalty for excessive moisture (favors wedge instead)
-    if (PWAT > 2.0) scores.STOVE -= 20;
+    if (PWAT > 2.0) scores.STOVEPIPE -= 20;
 
     // DRILLBIT TORNADOES: Fast-moving, narrow tornadoes (game type)
     // Characteristics: High storm speed, often in dry environments
@@ -352,11 +335,10 @@
     
     // Strong thermal gradient favors violent, narrow tornadoes
     if (thermal_mph > 30) {
-      scores.STOVE += 25;
-      scores.FUNNEL_MULTI_VORTEX += 20;
+      scores.STOVEPIPE += 25;
       scores.SIDEWINDER += 15;
     } else if (thermal_mph > 15) {
-      scores.STOVE += 15;
+      scores.STOVEPIPE += 15;
       scores.CONE += 10;
       scores.SIDEWINDER += 10;
     } else if (thermal_mph < 6) {
@@ -369,10 +351,9 @@
     // CROSS-PENALTIES AND BONUSES (based on observed conflicts)
     // ========================================================================
     
-    // Very high VTP + extreme lapse → MULTIPLE_VORTEX or STOVEPIPE, not CONE
+    // Very high VTP + extreme lapse → STOVEPIPE, not CONE
     if (VTP > 10 && LAPSE_RATE_0_3 > 9.5) {
-      scores.FUNNEL_MULTI_VORTEX += 35;
-      scores.STOVE += 25;
+      scores.STOVEPIPE += 25;
       scores.CONE -= 20;
       scores.ROPE -= 30;
     }
@@ -380,14 +361,13 @@
     // Extreme moisture → WEDGE, reduce other types
     if (PWAT > 2.0 && RH_MID > 85) {
       scores.WEDGE += 30;
-      scores.STOVE -= 15;
+      scores.STOVEPIPE -= 15;
       scores.ROPE -= 10;
     }
     
-    // Extreme instability + rotation → MULTIPLE_VORTEX favored
+    // Extreme instability + rotation → STOVEPIPE favored
     if (VTP > 9 && SRH > 700 && CAPE > 5500) {
-      scores.FUNNEL_MULTI_VORTEX += 40;
-      scores.STOVE += 15;
+      scores.STOVEPIPE += 15;
       scores.CONE -= 15;
     }
     
@@ -396,7 +376,7 @@
       scores.ROPE += 35;
       scores.CONE -= 25;
       scores.SIDEWINDER -= 30;
-      scores.STOVE -= 40;
+      scores.STOVEPIPE -= 40;
     }
     
     // Balanced high SRH + speed (not extreme) → SIDEWINDER, not STOVEPIPE
@@ -434,11 +414,10 @@
         probabilities = {
           ROPE: 0,                    // NO ROPE in extreme conditions
           CONE: 35,
-          STOVE: 25,
+          STOVEPIPE: 30,
           WEDGE: 15,
-          FUNNEL_MULTI_VORTEX: 10,
-          DRILLBIT: 8,
-          FUNNEL: 5,
+          DRILLBIT: 10,
+          FUNNEL: 8,
           SIDEWINDER: 2
         };
       } else {
@@ -446,12 +425,11 @@
         probabilities = {
           ROPE: 30,                   // Reduced from 50
           CONE: 25,                   // Increased from 20
-          STOVE: 15,                  // Increased from 10
+          STOVEPIPE: 15,              // Increased from 10
           WEDGE: 10,                  // Increased from 5
           FUNNEL: 8,                  // Increased from 5
           DRILLBIT: 7,                // Increased from 5
-          SIDEWINDER: 3,
-          FUNNEL_MULTI_VORTEX: 2
+          SIDEWINDER: 5
         };
       }
     }

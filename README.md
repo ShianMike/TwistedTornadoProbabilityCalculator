@@ -1,316 +1,249 @@
-# Twisted Thermos Analyzer v3.0
+# Twisted Tornado Tool v3.0
 
-A web-based tornado analysis tool for the Roblox Game **Twisted**. Uses machine learning trained on 121 real tornado events to predict tornado morphology types and estimate wind speeds with thermal wind calculations.
+A web tool for the Roblox game **Twisted**. It helps predict tornado types and wind speeds using computer learning from 121 in-game tornado scenarios.
 
-![Twisted Thermos Analyzer](https://img.shields.io/badge/version-3.0-blue)
+![Twisted Tool](https://img.shields.io/badge/version-3.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![ML Model](https://img.shields.io/badge/ML%20Model-Random%20Forest-orange)
 ![Training Data](https://img.shields.io/badge/Training%20Data-121%20Events-green)
 
-## 🌪️ Features
+## 🌪️ What It Does
 
-- **Tornado Morphology Prediction** - Calculates probability distribution for 8 tornado types:
-  - Rope (thin, weak tornadoes)
-  - Cone (classic funnel shape)
-  - Stove (cylindrical, strong tornadoes)
-  - Wedge (wide, often violent)
-  - Funnel (brief ground contact)
+- **Tornado Type Prediction** - Guesses which of 8 tornado types will happen:
+  - Rope (thin, weak)
+  - Cone (normal funnel shape)
+  - Stove (cylinder shape, strong)
+  - Wedge (wide, very strong)
+  - Funnel (touches ground briefly)
   - Drillbit (fast-moving, narrow)
-  - Sidewinder (rotational, cold environments)
-  - Funnel w/ Multi Vortex (multiple circulation centers)
+  - Sidewinder (spinning, cold weather)
+  - Funnel w/ Multi Vortex (multiple spinning parts)
 
-- **Machine Learning Wind Estimation** - Random Forest model (R² = 0.426) trained on 121 events:
-  - Feature importance: CAPE (16.5%), STP (15.6%), TVS Peaks (14.3%)
-  - Thermal wind proxy calculations from temperature gradients
-  - Enhanced Fujita (EF) scale estimates with uncertainty ranges
-  - Realistic caps based on observed tornado data (137-380 mph)
+- **Wind Speed Guessing** - Computer model trained on 121 in-game tornado scenarios:
+  - Uses weather data to guess wind speeds
+  - Shows EF scale ratings (EF0 to EF5+)
+  - Wind speeds from 137-380 mph possible
 
-- **Special Factors Analysis** - Identifies additional hazards:
-  - Rain-wrap probability
-  - Large hail potential
-  - Multiple vortices (realistic thresholds)
-  - Dust field conditions
-  - Long-track tornado potential
-  - Frequent lightning
+- **Extra Warnings** - Shows other dangerous things:
+  - Rain blocking view of tornado
+  - Large hail
+  - Multiple spinning parts
+  - Dust storms
+  - Long-lasting tornadoes
+  - Lots of lightning
 
-- **Interactive Visualizations**
-  - Horizontal bar chart with color-coded probabilities
-  - Mini wind speed range indicator
-  - Hover tooltips with detailed descriptions
-  - Auto-updating thermodynamics summary panel
+- **Easy to Use**
+  - Color bars show tornado chances
+  - Wind speed bar shows danger level
+  - Hover over things for more info
+  - Updates as you type
 
-- **OCR Screenshot Analysis** - Upload thermodynamics screenshots for automatic data extraction
+- **Photo Upload** - Take screenshot of game weather data for auto-fill
 
-## 🚀 Quick Start
+## 🚀 How to Use
 
-1. **Open the application**
-   - Simply open `index.html` in a modern web browser
-   - No installation or server required!
+1. **Open the tool**
+   - Open `index.html` in your web browser
+   - No download needed!
 
-2. **Enter atmospheric parameters**
-   - Fill in available data from the Twisted game
-   - Values auto-validate and clamp to realistic ranges
+2. **Enter weather numbers**
+   - Fill in data from Twisted game
+   - Tool checks if numbers make sense
 
-3. **View results**
-   - Analysis updates automatically as you type
-   - Click "Analyze" to manually trigger calculations
-   - Hover over tornado types for detailed descriptions
+3. **See results**
+   - Updates automatically as you type
+   - Click "Analyze" to refresh
+   - Hover over tornado types for details
 
-4. **Upload screenshot (optional)**
-   - Click "Upload Screenshot" to use OCR for automatic data extraction
-   - Supports thermodynamics screenshots from Twisted game
+4. **Upload photo (optional)**
+   - Click "Upload Screenshot" to auto-fill from game screenshot
 
-## 📊 Input Parameters
+## 📊 Weather Numbers to Enter
 
-### Left Column
-- **Temperature** (°F) - Surface air temperature
-- **CAPE** (J/kg) - Convective Available Potential Energy
-- **0-3km Lapse Rate** (°C/km) - Low-level temperature decrease
-- **PWAT** (inches) - Precipitable Water
-- **Surface RH** (%) - Surface Relative Humidity
-- **Storm Speed** (mph) - Storm motion velocity
+### Left Side
+- **Temperature** (°F) - How hot it is
+- **CAPE** (J/kg) - Storm energy
+- **0-3km Lapse Rate** (°C/km) - How fast air cools going up
+- **PWAT** (inches) - Water in air
+- **Surface RH** (%) - Humidity at ground
+- **Storm Speed** (mph) - How fast storm moves
 
-### Right Column
-- **Dewpoint** (°F) - Dew point temperature
-- **3CAPE** (J/kg) - CAPE for lowest 3km
-- **3-6km Lapse** (°C/km) - Mid-level lapse rate
-- **SRH** (m²/s²) - Storm-Relative Helicity
-- **700-500mb RH** (%) - Mid-level relative humidity
+### Right Side
+- **Dewpoint** (°F) - Moisture temperature
+- **3CAPE** (J/kg) - Storm energy in bottom 3km
+- **3-6km Lapse** (°C/km) - Air cooling in middle levels
+- **SRH** (m²/s²) - How much air spins
+- **700-500mb RH** (%) - Humidity in middle air
 
 ## 📝 What's New
+## v3.0 — In-Game Tornado Data Trained Model
+### 🧠 Machine Learning Added
+- **Trained Smart Model** on 121 in-game tornado scenarios from data files
+- **42.6% accuracy** in guessing wind speeds
+- **Most Important Factors**: Storm energy (CAPE), spinning (STP), tornado strength (TVS), low-level energy (3CAPE)
+- **Better Math** using temperature differences for more realistic results
+- **Smart Weights** replace old guessing methods
 
-## v3.0 — Machine Learning & Accuracy Revolution
+### 🌪️ Better Tornado Guessing
+- **8 Tornado Types** matching exact game types
+- **Fixed Scoring** based on game mechanics and computer learning
+- **Fixed Rope Problem** - no more wrong 50% chance in extreme weather
+- **Extreme Weather Logic** - very high energy + spinning now correctly shows 0% Rope chance
+- **Game Physics** based on Twisted tornado mechanics and patterns
 
-### 🧠 Machine Learning Integration
-- **Trained Random Forest Model** on 121 real tornado events from CSV data
-- **R² = 0.426** explaining 42.6% of wind speed variance
-- **Feature Importance Analysis**: CAPE (16.5%), STP (15.6%), TVS Peaks (14.3%), 3CAPE (14.2%), Lapse Rate (8.9%)
-- **Thermal Wind Proxy** calculations from temperature gradients add physical realism
-- **ML-Derived Weights** replace previous heuristic scoring
-
-### 🌪️ Tornado Classification Overhaul
-- **8 Tornado Types** matching exact game classifications
-- **Reformed Scoring System** based on meteorological research and ML insights
-- **ROPE Prediction Fixed** - eliminated false 50% probability in extreme conditions
-- **Extreme Condition Logic** - CAPE > 6000 + SRH > 500 scenarios now properly predict 0% ROPE
-- **Realistic Morphology** based on actual tornado science and damage patterns
-
-### 📊 Enhanced Atmospheric Analysis
-- **Expanded Temperature Range** - now supports cold weather (15-140°F)
-- **Lower PWAT Minimum** - down to 0.1" for dry scenarios
-- **Dust Field Factor** - new special factor for dry, windy conditions
-- **Improved Multiple Vortex Logic** - realistic thresholds (SRH > 300 + CAPE > 2000)
-- **Cold Weather Support** - Sidewinder tornadoes in sub-freezing conditions
+### 📊 Better Weather Analysis
+- **More Temperature Range** - works in cold weather (15-140°F)
+- **Less Water Needed** - down to 0.1" for dry conditions
+- **Dust Storm Factor** - new warning for dry, windy weather
+- **Better Multiple Tornado Logic** - realistic limits (spinning > 300 + energy > 2000)
+- **Cold Weather Support** - Sidewinder tornadoes when freezing
 
 ### 🔬 Technical Improvements
-- **Python Training Pipeline** - tornado_model_trainer.py for ML model development
-- **Feature Engineering** - TVS proxy calculations from atmospheric parameters
-- **Cross-Validation** - robust model performance on held-out data
-- **Uncertainty Quantification** - realistic wind speed ranges with confidence intervals
-- **Fallback Logic** - intelligent defaults prevent unrealistic predictions
-- **Validation Consistency** - all input ranges now match between form inputs, validation logic, and documentation
+- **Python Training** - tornado_model_trainer.py for computer model training
+- **Better Features** - tornado strength calculations from weather data
+- **Cross-Testing** - model works well on new data
+- **Uncertainty Ranges** - realistic wind speed ranges with confidence levels
+- **Smart Defaults** - prevents unrealistic predictions
+- **Consistent Checking** - all number limits match between input, checking, and documentation
 
-### 🎯 Validation & Accuracy
-- **Real-World Validation** - tested against actual tornado outcomes
-- **Extreme Scenario Tuning** - high CAPE/SRH combinations now predict correctly
-- **Penalty/Bonus Systems** - refined scoring prevents over-prediction of weak tornadoes
-- **Meteorologically Consistent** - tornado types match real-world atmospheric triggers
+### 🎯 Testing & Accuracy
+- **In-Game Testing** - tested against actual Twisted tornado outcomes
+- **Extreme Weather Tuning** - high energy/spinning combinations now predict correctly
+- **Penalty/Bonus Systems** - refined scoring prevents too many weak tornado predictions
+- **Game Consistent** - tornado types match in-game weather patterns
 
-## v2.1 — Patch Notes
+## v2.1 — Updates
 
 - Model & Data
-  - Retrained and recalibrated wind-estimation model on the expanded dataset (now 39 events).
-  - Adjusted normalization and component weights; baseline/re-scaling tuned to observed range (137–373 mph).
-  - Added targeted bonuses for extreme CAPE, SRH, lapse rates and storm speed to reflect observed extremes.
-  - Integrated a thermal-wind proxy (surface finite-difference / estimated gradients) that contributes to wind estimates.
+  - Retrained wind-guessing model on bigger dataset (39 events)
+  - Adjusted math and weights; tuned to observed range (137–373 mph)
+  - Added bonuses for extreme weather values to match real observations
+  - Added temperature difference calculations for wind estimates
 
 - Tornado Types & Scoring
-  - Merged the old FUNNEL behavior into DRILLBIT (internal key: "DRILLBIT"); display label shows as "DRILLBIT/FUNNEL".
-  - Tuned scoring across all types (SIDEWINDER, STOVEPIPE, WEDGE, CONE, ROPE, DRILLBIT) to better match in-game behaviors.
-  - Improved multiple-vortex logic to allow realistic occurrences under moderate SRH/CAPE (not only extreme VTP).
+  - Combined old FUNNEL with DRILLBIT; now shows as "DRILLBIT/FUNNEL"
+  - Tuned scoring for all types to better match game behavior
+  - Improved multiple tornado logic for moderate conditions
 
-- Visualization & UI
-  - Chart labels use a display-name mapping so internal keys remain stable while UI shows "DRILLBIT/FUNNEL".
-  - Mini wind bar renderer updated to always render numeric estimates (adaptive font sizing for narrow bars).
-  - Theoretical maximum display logic tightened and made more selective.
-  - Storm Motion input capped to 110 mph for realistic input validation.
-  - Exported ChartRenderer.getDisplayName() for reuse in chart rendering.
+- Display & Interface
+  - Chart labels use display names while keeping internal math stable
+  - Mini wind bar always shows numbers with adaptive text sizing
+  - Improved theoretical maximum display logic
+  - Storm speed limited to 110 mph for realistic input
+  - Improved special factors display
 
-- Styling & UX
-  - Modernized UI: glassy cards, improved buttons, input focus effects, and refined spacing.
-  - Removed full-bleed background gradient per preference; switched to a solid background and adjusted app translucency.
-  - Added subtle shadows and transitions to improve visual polish.
+- Styling & Experience
+  - Modern glass cards, better buttons, improved spacing
+  - Removed full background gradient; solid background with translucent app
+  - Added smooth transitions and visual polish
 
-- Misc / Implementation
-  - Added improved display of special factors (Rain-Wrapped, Large Hail, Multiple Vortices, Dust Vortices, Long-Track, Frequent Lightning).
-  - Kept internal keys stable for calculations (e.g., "DRILLBIT"), while providing friendly display names in the UI.
-  - Small bugfixes: ensured percent column rendering aligns with chart bars and improved tooltip behavior.
+### v2.0.0 - Simpler Documentation & Photo Upload
 
+**Documentation Cleanup** - Made documentation easier to read
+- Removed technical programming sections
+- Removed detailed code information
+- Simplified version history
+- Focused on user experience
+- 30% shorter documentation
 
-### v2.0.0 - Documentation Overhaul & OCR Feature
-
-**README Restructuring** - Streamlined documentation for better user experience
-
-**Removed Technical Sections**
-- Removed "Technical Details" section (Built With, Browser Support, File Structure)
-- Removed "Development" section (Making Changes, Contributing guidelines)
-- Removed technical implementation details and code-focused content
-- Removed 400+ lines of code documentation notes
-
-**Simplified Version History**
-- Condensed version entries to focus on user-facing changes only
-- Removed detailed technical implementation notes
-- Removed specific code file references and line counts
-- Kept only user experience improvements and feature changes
-
-**Enhanced User Focus**
-- "Coming Soon" replaces "Future Plans" with simpler feature list
-- Credits section simplified
-- Version/License info condensed to single line footer
-- Overall 30% reduction in documentation length
-
-**New OCR Feature**
-- Upload screenshots of Twisted thermodynamics panel
-- Automatic text extraction using Tesseract.js OCR engine
+**New Photo Upload Feature**
+- Upload screenshots of Twisted weather panel
+- Automatic text reading using computer vision
 - Recognizes parameter names and values
-- Auto-populates input fields with extracted data
-- Supports common screenshot formats (PNG, JPG, JPEG)
+- Auto-fills input fields with extracted data
+- Supports PNG, JPG, JPEG formats
 - Saves time entering data manually
 
-**Removed PNG Export Feature**
-- Removed "Export PNG" functionality
-- Reduced bundle size by removing html2canvas dependency
-- Streamlined interface with focus on analysis tools
+**Removed Features**
+- Removed "Export PNG" feature
+- Smaller file size
+- Cleaner interface focused on analysis
 
-**What Remains:**
-- All feature descriptions and capabilities
-- Complete "What's New" user experience notes
-- Quick Start guide and Input Parameters
-- Usage Tips and Testing Scenarios
-- Disclaimer and Credits
+### v1.4.5 - Much Higher Wind Speeds
 
-### v1.4.5 - Extreme Wind Update
+**Much Higher Wind Estimates**
+- Wind speeds now 56% higher than before
+- Extreme scenarios reach 235-320 mph (up from 220-250 mph)
+- Theoretical maximums can reach 500+ mph
+- Much wider ranges (up to 80 mph spread vs 40 mph before)
 
-**Dramatically Increased Wind Estimates**
-- Wind speeds now ~56% higher than v1.4.3
-- Extreme scenarios regularly reach **235-320 mph** (up from 220-250 mph cap)
-- Theoretical maximums can now reach **500+ mph** for unprecedented conditions
-- Much wider estimate ranges (up to 80 mph spread vs 40 mph previously)
-- Example: v1.4.3's 185-218 mph → v1.4.5's **170-305 mph**
-
-**Improved Wind Speed Visualization**
-- Bar is now 33% longer (400px) for better readability
-- Added **pink/magenta gradient** for extreme winds above EF5 territory
-- Wind estimates labeled with "**Est.**" prefix for clarity
+**Better Wind Display**
+- Bar 33% longer for better readability
+- Added pink/magenta colors for extreme winds above EF5
+- Wind estimates labeled with "Est." prefix
 - Color gradient: Green → Yellow → Orange → Red → Dark Red → Pink
-- White estimate bar extends much further for extreme scenarios
 
 **Theoretical Maximum Display**
-- Now appears **above** the disclaimer note for better visibility
-- Triggers more frequently for high-end scenarios
-- Shows potential winds beyond measured EF5 thresholds
-- Displays "500+" when calculations exceed the scale
+- Shows above disclaimer for better visibility
+- Appears more often for high-end scenarios
+- Shows potential beyond EF5 limits
 
-**Smart Input Validation System**
-- 25+ validation checks help identify unrealistic data entry
-- Warns when dewpoint exceeds temperature
-- Flags inconsistent moisture parameters
-- Alerts for extreme values (SRH >800, Storm Speed >100, etc.)
-- Checks CAPE vs temperature relationships
-- Validates lapse rate profiles
-- Plain text warnings with INFO/WARNING prefixes
+**Smart Input Checking**
+- 25+ checks help find unrealistic data entry
+- Warns when dewpoint higher than temperature
+- Flags inconsistent moisture values
+- Alerts for extreme values
+- Checks relationships between different weather values
 
-**User Interface Improvements**
-- Theoretical maximum moved above disclaimer for prominence
-- Updated disclaimer text for clearer interpretation guidance
-- Auto-analysis works more reliably
-- Empty input fields no longer auto-fill with zeros
-- Summary panel shows "—" instead of "0" for empty fields
+### v1.4.4 - Tornado Balance Update
 
-### v1.4.4 - Tornado Probability Rebalance
-
-**Based on Real In-Game Scenarios**
-- Analyzed actual Twisted gameplay thermodynamics
+**Based on Real Game Data**
+- Analyzed actual Twisted gameplay weather
 - Rebalanced all 6 tornado types for accuracy
-- Better matches observed tornado behavior in game
+- Better matches what actually happens in game
 
-**SIDEWINDER** - Now properly triggers with high storm speeds and SRH
-- Sweet spot: CAPE 3500-6000, Storm Speed >70 mph
-- Bonus for extreme rotation scenarios
-
-**STOVEPIPE** - Tuned for extreme CAPE environments
-- Triggers earlier with lower VTP threshold (2.0 → 1.2)
-- Better represents violent, tight-core tornadoes
-
+**SIDEWINDER** - Now works with high storm speeds and spinning
+**STOVEPIPE** - Tuned for extreme energy environments
 **WEDGE** - Reduced in dry/fast scenarios
-- Now requires PWAT >1.6 for significant probability
-- Heavy penalty for fast-moving storms
-- Better represents rain-wrapped tornadoes
-
-**DRILLBIT** - Buffed for extreme scenarios
-- Major boost for very high storm speeds (>55 mph)
-- Dry conditions emphasis (PWAT <1.4)
-- Better represents thin, fast-moving tornadoes
-
-**CONE** - Balanced for moderate conditions
-- Penalty for extreme setups
-- Better represents "classic" tornado scenarios
-
+**DRILLBIT** - Boosted for extreme scenarios
+**CONE** - Balanced for normal conditions
 **ROPE** - Unchanged, still represents weak tornadoes
 
 ### v1.4.3 - Balance Update
 
-**Major Rebalance** - Improved accuracy based on in-game tornado behavior
-
-**Tornado Probability Changes**
-- Sidewinder: Reduced excessive dominance in high-SRH scenarios
-- Wedge: Buffed moisture scoring, better rain-wrapped tornado representation
-- Stovepipe: Lowered VTP threshold, appears more in extreme instability
-- Drillbit: Enhanced dry line detection
-- Cone: Broader parameter acceptance, better "classic" tornado representation
-- Rope: Raised CAPE threshold, more realistic for marginal severe weather
+**Major Rebalance** - Better accuracy based on game tornado behavior
+- Sidewinder: Less dominant in high-spinning scenarios
+- Wedge: Better moisture scoring, better rain-wrapped representation
+- Stovepipe: Lower threshold, appears more in extreme conditions
+- Drillbit: Better dry line detection
+- Cone: Broader acceptance, better "classic" tornado representation
+- Rope: Higher energy threshold, more realistic for weak weather
 
 **Wind Speed Improvements**
-- ~15% higher wind estimates overall
-- Better scaling for extreme atmospheric parameters
-- Typical range: 15-35 mph spread
-- Extreme scenarios now properly reach EF5 thresholds (200+ mph)
-- Raised caps: 220 mph (min) / 250 mph (max)
-
-**Special Factors**
-- Re-added "Long-Track" tornado indicator
-- Triggers when SRH >300, Storm Speed >35, CAPE >2000
+- 15% higher wind estimates overall
+- Better scaling for extreme weather
+- Extreme scenarios properly reach EF5 thresholds (200+ mph)
 
 ### v1.4.2 - Code Documentation
 
 **User Experience Improvements**
-- Removed experimental OCR/screenshot upload feature
-- Faster load times (~2MB smaller file size)
-- Added privacy statement to footer
+- Removed experimental photo upload feature
+- Faster loading (~2MB smaller)
+- Added privacy statement
 - Cleaner, more focused interface
 
-## 🎮 Usage Tips
+## 🎮 Tips for Use
 
-1. **Start with CAPE** - Most important parameter for tornado potential
-2. **SRH matters** - High rotation (SRH > 300) increases likelihood
+1. **Start with CAPE** - Most important number for tornado chance
+2. **SRH matters** - High spinning (SRH > 300) increases likelihood
 3. **Moisture is key** - PWAT > 1.5 favors Wedge, PWAT < 1.2 favors Drillbit
 4. **Watch storm speed** - Fast storms (>50 mph) favor Drillbit/Sidewinder
-5. **Check special factors** - Additional hazards shown below wind estimate
-6. **Hover for details** - Tooltips explain each parameter and tornado type
-7. **Watch for validation warnings** - Help ensure accurate data entry
-8. **Use theoretical maximum** - Shows extreme potential beyond typical EF5
+5. **Check special warnings** - Extra dangers shown below wind estimate
+6. **Hover for details** - Tooltips explain each number and tornado type
+7. **Watch for warnings** - Help make sure data is correct
+8. **Use theoretical maximum** - Shows extreme potential beyond normal EF5
 
-## 🧪 Testing Scenarios
+## 🧪 Test Examples
 
 **High-Moisture Outbreak** (PWAT 1.8+, RH 75+)
 - Expected: Wedge dominant (~35-40%)
 - Rain-wrap and low visibility likely
 
-**Dry Line Setup** (PWAT <1.2, DEW_SPREAD >15, Speed >50)
+**Dry Line Setup** (PWAT <1.2, big dew spread, Speed >50)
 - Expected: Drillbit dominant (~40-50%)
 - Fast-moving, thin tornadoes
 
-**Classic Supercell** (STP 2-3, balanced parameters)
+**Classic Supercell** (STP 2-3, balanced numbers)
 - Expected: Cone highest (~30-35%)
 - Moderate intensity, well-organized
 
@@ -318,36 +251,36 @@ A web-based tornado analysis tool for the Roblox Game **Twisted**. Uses machine 
 - Expected: Stovepipe shows up (~20-25%)
 - Violent potential with EF4-EF5 winds
 
-**Marginal Severe** (CAPE 1500-2500, SRH <200)
+**Weak Severe** (CAPE 1500-2500, SRH <200)
 - Expected: Rope dominant (~50-60%)
 - Weak, brief tornadoes
 
-## ⚠️ Disclaimer
+## ⚠️ Important Warning
 
-This tool is designed for the **Twisted weather simulation game** and should **NOT** be used for real weather forecasting or safety decisions.
+This tool is made for the **Twisted game from Roblox** and should **NOT** be used for real weather or safety decisions.
 
-- Tornado probabilities are based on simplified game mechanics
-- Wind estimates are theoretical and may not match actual tornado behavior
-- Does not analyze hodographs, boundary layers, or storm-scale dynamics
-- For educational and entertainment purposes only
+- Tornado chances are based on simple game mechanics
+- Wind estimates are guesses and may not match real tornado behavior
+- Does not analyze complex weather patterns
+- For fun and learning only
 
 ## 🔜 Coming Soon
 
-- Hodograph analysis visualization
-- Preset atmospheric profiles for quick testing
-- Environmental sounding interpretation
-- More refined validation warnings
-- Additional special factors
+- Wind pattern analysis pictures
+- Pre-made weather setups for quick testing
+- Weather balloon data interpretation
+- Better warning system
+- More special factors
 
 ## 🙏 Credits
 
-- **Created by:** seanmike
-- **Inspired by:** Real meteorological indices (STP, VTP, CAPE, SRH)
-- **For:** Twisted weather simulation game community
+- **Made by:** seanmike
+- **Based on:** Real weather science (STP, VTP, CAPE, SRH)
+- **For:** Twisted game community
 
 ---
 
-**Version:** 3.0.0 | **License:** MIT | **ML Model:** Random Forest (R² = 0.426)
+**Version:** 3.0.0 | **License:** MIT | **Computer Model:** Random Forest (42.6% accurate)
 
 
 

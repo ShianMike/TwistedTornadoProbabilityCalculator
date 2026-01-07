@@ -26,16 +26,57 @@ html, body {
 /* base reset */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
-.app{max-width:1200px;margin:28px auto;padding:20px}
+.app{max-width:1500px;margin:28px auto;padding:24px}
 .app-header h1{margin:0;font-size:20px}
 .subtitle{color:var(--muted);margin-top:6px;font-size:13px}
 
-/* layout - BACK TO ORIGINAL 2-COLUMN */
+/* Header layout */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  flex: 0 0 auto;
+}
+
+.capture-btn {
+  font-size: 12px;
+  padding: 8px 16px;
+  white-space: nowrap;
+}
+
+/* layout - THREE COLUMN WITH PATCH NOTES */
 .layout-grid{
   display:grid;
-  grid-template-columns: 440px 1fr; /* Back to original: left inputs | right cards */
-  gap:32px;
+  grid-template-columns: 420px 1fr; /* Input form and right content */
+  grid-template-rows: auto auto; /* Two rows for left side */
+  gap:24px;
   align-items:start;
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.left-col {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.patch-notes-card {
+  grid-column: 1;
+  grid-row: 2;
+  width: 420px;
+}
+
+.right-col {
+  grid-column: 2;
+  grid-row: 1 / 3; /* Span both rows */
 }
 
 /* card */
@@ -60,9 +101,9 @@ html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
   box-shadow: 0 16px 48px rgba(38,198,218,0.18), 0 4px 16px rgba(0,0,0,0.22);
 }
 
-/* left column form - BACK TO ORIGINAL SIZE */
+/* left column form - OPTIMIZED SIZE */
 .left-col{
-  width:440px;
+  width:420px;
   max-width:100%;
   padding:22px;
   position:relative;
@@ -136,6 +177,21 @@ input:focus{
 .btn.primary:hover {
   background: linear-gradient(90deg, #26c6da 0%, #1e88e5 100%);
   box-shadow: 0 4px 16px rgba(38,198,218,0.18);
+}
+.btn.secondary {
+  background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(76,175,80,0.12);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.btn.secondary:hover {
+  background: linear-gradient(90deg, #45a049 0%, #4caf50 100%);
+  box-shadow: 0 4px 16px rgba(76,175,80,0.18);
+}
+.btn.secondary:disabled {
+  background: #666;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 .btn.ghost, .btn.outline {
   /* ...existing code... */
@@ -305,19 +361,19 @@ input:focus{
 
 .miniwrap{
   flex: 1;
-  min-width: 200px; /* Increased from 180px */
-  max-width: 380px; /* Increased from 350px */
-  padding: 6px 10px; /* Increased padding */
+  min-width: 120px; /* Reduced from 150px */
+  max-width: 200px; /* Reduced from 280px */
+  padding: 3px 6px; /* Reduced padding further */
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  border-radius: 4px; /* Reduced border radius */
 }
 
 #miniWind{
   display: block; 
   width: 100%;
-  height: 20px; /* Increased from 16px for better visibility */
-  border-radius: 4px; /* Slightly larger radius */
-  box-shadow: 0 2px 8px rgba(38,198,218,0.10);
+  height: 8px;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(38,198,218,0.10);
   background: linear-gradient(90deg, #232a3b 0%, #181c2f 100%);
 }
 
@@ -385,6 +441,181 @@ input:focus{
   margin-bottom: 0;
   height: fit-content;
 }
+
+/* patch notes card styling */
+.patch-notes-card {
+  min-height: 380px;
+  max-height: 480px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(120deg, rgba(76, 175, 80, 0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.10);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.patch-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.patch-notes-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.refresh-btn {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 6px;
+  color: #81c784;
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: rgba(76, 175, 80, 0.3);
+  border-color: rgba(76, 175, 80, 0.5);
+  color: #a5d6a7;
+  transform: rotate(180deg);
+}
+
+.patch-notes-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px 8px 8px;
+}
+
+.loading-indicator {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 20px;
+  animation: pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  font-size: 13px;
+  padding: 20px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.patch-notes-text {
+  font-size: 12px;
+  line-height: 1.1;
+  color: #e0e7ff;
+  padding: 2px 0;
+}
+
+.patch-notes-text h2 {
+  color: #81c784;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 4px 0 3px 0;
+  padding-bottom: 1px;
+  border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.patch-notes-text h2:first-child {
+  margin-top: 0;
+}
+
+.patch-notes-text h3 {
+  color: #a5d6a7;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 3px 0 2px 0;
+}
+
+.patch-notes-text h4 {
+  color: #c8e6c9;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 2px 0 1px 0;
+}
+
+.patch-notes-text strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.patch-notes-text ul {
+  padding-left: 0;
+  margin: 2px 0 3px 0;
+}
+
+.patch-notes-text li {
+  list-style: none;
+  padding: 0px 0 0px 12px;
+  position: relative;
+  color: #c1d3fe;
+  margin-bottom: 0px;
+}
+
+.patch-notes-text li:before {
+  content: "•";
+  color: #81c784;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.patch-notes-text code {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffd54f;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.patch-notes-text p {
+  margin: 1px 0;
+}
+
+/* Custom scrollbar for patch notes */
+.patch-notes-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.patch-notes-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.patch-notes-content::-webkit-scrollbar-thumb {
+  background: rgba(76, 175, 80, 0.3);
+  border-radius: 3px;
+}
+
+.patch-notes-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(76, 175, 80, 0.5);
+}
+
 .prob-card h3{margin:0 0 10px 0;font-size:16px}
 .chart-wrap{height:360px;min-height:240px;width:100%;overflow:hidden;position:relative;padding-right:90px;pointer-events:auto}
 

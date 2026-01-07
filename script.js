@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Button references
   const analyzeBtn = get('analyze');
   const resetBtn = get('reset');
-  const exportBtn = get('exportBtn');
 
   // Chart canvases
   const probCanvas = get('probChart');      // Main probability distribution chart

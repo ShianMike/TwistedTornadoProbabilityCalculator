@@ -269,9 +269,10 @@
     </header>
 
     <section class="layout-grid">
-      <aside class="left-col card glass">
-        <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
-          <h2>Inputs</h2>
+      <div class="left-column-wrapper">
+        <aside class="left-col card glass">
+          <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
+            <h2>Inputs</h2>
 
           <div class="grid-2">
             <!-- LEFT COLUMN INPUTS -->
@@ -377,15 +378,16 @@
         </form>
       </aside>
 
-      <div class="patch-notes-card card glass" role="region" aria-label="Patch Notes">
-        <div class="patch-notes-header">
-          <h3>PATCH NOTES</h3>
-          <button id="refreshPatchNotes" class="refresh-btn" title="Refresh patch notes">⟳</button>
-        </div>
-        <div class="patch-notes-content">
-          <div id="patchNotesLoading" class="loading-indicator">Loading patch notes...</div>
-          <div id="patchNotesText" class="patch-notes-text" style="display: none;"></div>
-          <div id="patchNotesError" class="error-message" style="display: none;">Failed to load patch notes. Check connection and try again.</div>
+        <div class="patch-notes-card card glass" role="region" aria-label="Patch Notes">
+          <div class="patch-notes-header">
+            <h3>PATCH NOTES</h3>
+            <button id="refreshPatchNotes" class="refresh-btn" title="Refresh patch notes">⟳</button>
+          </div>
+          <div class="patch-notes-content">
+            <div id="patchNotesLoading" class="loading-indicator">Loading patch notes...</div>
+            <div id="patchNotesText" class="patch-notes-text" style="display: none;"></div>
+            <div id="patchNotesError" class="error-message" style="display: none;">Failed to load patch notes. Check connection and try again.</div>
+          </div>
         </div>
       </div>
 

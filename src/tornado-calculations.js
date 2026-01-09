@@ -102,18 +102,18 @@
     // Calibrated weights to match observed tornado data (max ~260 mph)
     // Weighted by correlation strength for realistic stovepipe/wedge/cone estimates
     // Lapse_3_6km: 0.9886, Lapse_0_3km: 0.9841, SRH: 0.9822, CAPE_3km: 0.9717
-    const lapseHighComponent = lapseHighNorm * 42;   // 0.9886 correlation
-    const lapseComponent = lapseNorm * 40;           // 0.9841 correlation
-    const srhComponent = srhNorm * 38;               // 0.9822 correlation
-    const cape3Component = cape3Norm * 35;           // 0.9717 correlation
+    const lapseHighComponent = lapseHighNorm * 44;   // 0.9886 correlation (+2 mph)
+    const lapseComponent = lapseNorm * 42;           // 0.9841 correlation (+2 mph)
+    const srhComponent = srhNorm * 40;               // 0.9822 correlation (+2 mph)
+    const cape3Component = cape3Norm * 36;           // 0.9717 correlation (+1 mph)
     
     // Secondary features
-    const capeComponent = capeNorm * 36;             // 0.9386 correlation
+    const capeComponent = capeNorm * 38;             // 0.9386 correlation (+2 mph)
     const tvsNorm = Math.min(1.0, (features[11] || 0) / 8);
-    const tvsComponent = tvsNorm * 37;               // 0.9713 correlation
+    const tvsComponent = tvsNorm * 39;               // 0.9713 correlation (+2 mph)
     
-    // Base prediction formula (calibrated to observed tornado speeds ~160-240 mph for high risk)
-    let prediction = 95;  // Base windspeed
+    // Base prediction formula (calibrated to observed tornado speeds ~170-250 mph for high risk)
+    let prediction = 105;  // Base windspeed (+10 mph increase)
     prediction += lapseHighComponent;
     prediction += lapseComponent;
     prediction += srhComponent;

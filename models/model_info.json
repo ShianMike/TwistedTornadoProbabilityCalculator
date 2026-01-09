@@ -1,0 +1,42 @@
+{
+  "model_type": "SVR",
+  "model_name": "SVM",
+  "feature_names": [
+    "CAPE",
+    "SRH",
+    "Lapse_0_3km",
+    "PWAT",
+    "Temperature",
+    "Dewpoint",
+    "CAPE_3km",
+    "Lapse_3_6km",
+    "Surface_RH",
+    "RH_700_500",
+    "Storm_Motion",
+    "Total_TVS_Peaks"
+  ],
+  "test_r2_score": 0.9852468566708288,
+  "test_rmse": 4.6130178774850314,
+  "test_mae": 3.8561540894367057,
+  "cv_mean_r2": 0.9672841305954074,
+  "cv_std_r2": 0.03473958296004238,
+  "feature_importance": {},
+  "training_date": "2026-01-09T12:12:21.883398",
+  "model_version": "4.0",
+  "all_models_tested": [
+    "SVM",
+    "Random Forest",
+    "Ridge",
+    "Gradient Boosting",
+    "AdaBoost",
+    "Neural Network"
+  ],
+  "all_models_r2_scores": {
+    "SVM": 0.9852468566708288,
+    "Random Forest": 0.982637137756517,
+    "Ridge": 0.9749241050117566,
+    "Gradient Boosting": 0.9697583213610688,
+    "AdaBoost": 0.9613634713940834,
+    "Neural Network": -6.0609846825657225
+  }
+}

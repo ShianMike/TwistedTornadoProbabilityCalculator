@@ -1,0 +1,7 @@
+Model,R2_Test,RMSE,MAE,Best_Params
+SVM,0.9852468566708288,4.6130178774850314,3.8561540894367057,"{'C': 100, 'gamma': 'auto', 'kernel': 'rbf'}"
+Random Forest,0.982637137756517,5.004417298747174,4.278499999999997,"{'max_depth': 10, 'min_samples_split': 2, 'n_estimators': 200}"
+Ridge,0.9749241050117566,6.01410599599327,4.923022647523266,{'alpha': 0.1}
+Gradient Boosting,0.9697583213610688,6.604589106734385,5.6660492301180625,"{'learning_rate': 0.05, 'max_depth': 3, 'n_estimators': 200}"
+AdaBoost,0.9613634713940834,7.465207891356683,5.740079365079365,"{'learning_rate': 1.0, 'n_estimators': 200}"
+Neural Network,-6.0609846825657225,100.91959327173687,86.4402471150437,"{'alpha': 0.001, 'hidden_layer_sizes': (100, 100, 50), 'learning_rate_init': 0.01}"

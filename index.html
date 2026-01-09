@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Twisted Wind & Tornado Predictor</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/imagestyle.css">
+  
+  <!-- Load scripts with defer -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="src/input-validation.js" defer></script>
+  <script src="src/tornado-calculations.js" defer></script>
+  <script src="src/chart-renderer.js" defer></script>
+  <script src="src/imageprocess.js" defer></script>
+  <script src="src/script.js" defer></script>
+  <script>
+    // Patch Notes functionality
+    async function loadPatchNotes() {
+      const loadingEl = document.getElementById('patchNotesLoading');
+      const textEl = document.getElementById('patchNotesText');
+      const errorEl = document.getElementById('patchNotesError');
+      
+      loadingEl.style.display = 'block';
+      textEl.style.display = 'none';
+      errorEl.style.display = 'none';
+      
+      try {
+        const response = await fetch('docs/README.md');
+        if (!response.ok) {
+          throw new Error('Failed to fetch README');
+        }
+        
+        const markdownText = await response.text();
+        
+        // Extract patch notes section (from "What's New" onwards)
+        const patchNotesStart = markdownText.indexOf('## 📝 What\'s New');
+        if (patchNotesStart === -1) {
+          throw new Error('Patch notes section not found');
+        }
+        
+        // Find the end of patch notes (before next major section)
+        const patchNotesEnd = markdownText.indexOf('## 🎮 Usage Tips', patchNotesStart);
+        const patchNotesSection = patchNotesEnd > -1 
+          ? markdownText.substring(patchNotesStart, patchNotesEnd)
+          : markdownText.substring(patchNotesStart);
+        
+        // Convert markdown to HTML (basic conversion)
+        const htmlContent = convertMarkdownToHtml(patchNotesSection);
+        
+        textEl.innerHTML = htmlContent;
+        loadingEl.style.display = 'none';
+        textEl.style.display = 'block';
+      } catch (error) {
+        console.error('Error loading patch notes:', error);
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Basic markdown to HTML converter
+    function convertMarkdownToHtml(markdown) {
+      return markdown
+        // Headers
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Lists
+        .replace(/^- (.*$)/gim, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+        // Code blocks
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Line breaks
+        .replace(/\n/g, '<br>')
+        // Clean up multiple br tags
+        .replace(/(<br>){3,}/g, '<br><br>');
+    }
+    
+    // Load patch notes when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPatchNotes();
+      
+      // Add refresh button functionality
+      document.getElementById('refreshPatchNotes').addEventListener('click', loadPatchNotes);
+      
+      // Add save PNG functionality
+      document.getElementById('savePNG').addEventListener('click', capturePNG);
+    });
+    
+    // PNG Capture functionality
+    async function capturePNG() {
+      const saveBtn = document.getElementById('savePNG');
+      const originalText = saveBtn.textContent;
+      
+      try {
+        saveBtn.textContent = 'Capturing...';
+        saveBtn.disabled = true;
+        
+        // Find the analysis elements
+        const thermoCard = document.querySelector('.thermo-card');
+        const probCard = document.querySelector('.prob-card');
+        
+        if (!thermoCard || !probCard) {
+          alert('Please run an analysis first to generate results to capture.');
+          return;
+        }
+        
+        // Create a visible container for debugging
+        const captureContainer = document.createElement('div');
+        captureContainer.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 1200px;
+          min-height: 800px;
+          background: #1f2937;
+          color: #e6eef6;
+          font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+          padding: 20px;
+          border-radius: 16px;
+          z-index: 9999;
+        `;
+        
+        // Clone and style the thermodynamics card
+        const thermoClone = thermoCard.cloneNode(true);
+        thermoClone.style.cssText = `
+          background: #374151;
+          border: 1px solid #4b5563;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 20px;
+          color: #e6eef6;
+        `;
+        
+        // Clone the probability card
+        const probClone = probCard.cloneNode(true);
+        probClone.style.cssText = `
+          background: #374151;
+          border: 1px solid #4b5563;
+          border-radius: 12px;
+          padding: 20px;
+          color: #e6eef6;
+        `;
+        
+        // Replace canvas elements with their rendered content
+        const originalCanvas = document.getElementById('probChart');
+        const originalMiniCanvas = document.getElementById('miniWind');
+        
+        if (originalCanvas) {
+          const canvasImg = document.createElement('img');
+          canvasImg.src = originalCanvas.toDataURL();
+          canvasImg.style.cssText = `
+            width: 100%; 
+            height: 350px; 
+            max-width: none;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+          `;
+          
+          const clonedCanvas = probClone.querySelector('canvas');
+          if (clonedCanvas) {
+            // Wrap in container to preserve chart layout
+            const chartContainer = document.createElement('div');
+            chartContainer.style.cssText = `
+              position: relative;
+              width: 100%;
+              height: 350px;
+              overflow: hidden;
+            `;
+            chartContainer.appendChild(canvasImg);
+            clonedCanvas.parentNode.replaceChild(chartContainer, clonedCanvas);
+          }
+        }
+        
+        if (originalMiniCanvas) {
+          const miniImg = document.createElement('img');
+          miniImg.src = originalMiniCanvas.toDataURL();
+          miniImg.style.cssText = `
+            width: 100%; 
+            height: 28px;
+            display: block;
+            margin: 8px 0;
+            image-rendering: crisp-edges;
+          `;
+          
+          const clonedMiniCanvas = thermoClone.querySelector('#miniWind') || thermoClone.querySelector('canvas');
+          if (clonedMiniCanvas) {
+            // Create a container div for better spacing
+            const windContainer = document.createElement('div');
+            windContainer.style.cssText = `
+              padding: 8px 0;
+              margin: 8px 0;
+            `;
+            windContainer.appendChild(miniImg);
+            clonedMiniCanvas.parentNode.replaceChild(windContainer, clonedMiniCanvas);
+          }
+        }
+        
+        captureContainer.appendChild(thermoClone);
+        captureContainer.appendChild(probClone);
+        
+        // Add to document
+        document.body.appendChild(captureContainer);
+        
+        // Wait for rendering
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Capture with simpler settings
+        const canvas = await html2canvas(captureContainer, {
+          backgroundColor: '#1f2937',
+          scale: 1,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          width: 1200,
+          height: captureContainer.offsetHeight
+        });
+        
+        // Create download
+        const link = document.createElement('a');
+        link.download = `twisted-analysis-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        document.body.removeChild(captureContainer);
+        
+        saveBtn.textContent = 'Saved!';
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Capture error:', error);
+        alert(`Capture failed: ${error.message}`);
+        saveBtn.textContent = 'Error';
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+        }, 2000);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+  </script>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>Twisted Tornado Probability Predictor</h1>
+          <p class="subtitle">Enter parameters and analyze tornado morphology probability</p>
+        </div>
+        <div class="header-right">
+          <button id="savePNG" type="button" class="btn secondary capture-btn">Capture/Save Thermos & Tornado Type as PNG</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="layout-grid">
+      <div class="left-column-wrapper">
+        <aside class="left-col card glass">
+          <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
+            <h2>Inputs</h2>
+
+          <div class="grid-2">
+            <!-- LEFT COLUMN INPUTS -->
+            <div class="input-panel">
+              <div class="input-row">
+                <label for="TEMP" class="label-title">Temperature (F)</label>
+                <input id="TEMP" type="number" step="0.1" min="15" max="140" placeholder="" autocomplete="off">
+              </div>
+              <div class="input-row">
+                <label for="CAPE" class="label-title">CAPE (J/kg)</label>
+                <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="LAPSE_RATE_0_3" class="label-title">0-3km Lapse Rate (C/km)</label>
+                <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="PWAT" class="label-title">PWAT (in)</label>
+                <input id="PWAT" type="number" step="0.01" min="0.1" max="2.5" placeholder="" autocomplete="off">
+              </div>
+              <div class="input-row">
+                <label for="SURFACE_RH" class="label-title">Surface RH (%)</label>
+                <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="STP" class="label-title">STP</label>
+                <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="STORM_SPEED" class="label-title">Storm Motion (mph)</label>
+                <input id="STORM_SPEED" type="number" step="1" min="0" max="200" placeholder="">
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN INPUTS -->
+            <div class="input-panel">
+              <div class="input-row">
+                <label for="DEWPOINT" class="label-title">Dewpoint (F)</label>
+                <input id="DEWPOINT" type="number" step="0.1" min="15" max="120" placeholder="" autocomplete="off">
+              </div>
+              <div class="input-row">
+                <label for="CAPE_3KM" class="label-title">3CAPE (J/kg)</label>
+                <input id="CAPE_3KM" type="number" step="1" min="0" max="300" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="LAPSE_3_6KM" class="label-title">3–6 km Lapse (C/km)</label>
+                <input id="LAPSE_3_6KM" type="number" step="0.1" min="0" max="10" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="SRH" class="label-title">SRH (m²/s²)</label>
+                <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
+                <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
+              </div>
+              <div class="input-row">
+                <label for="VTP" class="label-title">VTP</label>
+                <input id="VTP" type="number" step="0.1" min="0" max="16" placeholder="">
+              </div>
+            </div>
+          </div>
+
+          <!-- Image Upload Section with improved layout -->
+          <div class="upload-section">
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            
+            <!-- Buttons side by side -->
+            <div class="upload-buttons">
+              <button type="button" class="load-btn" onclick="document.getElementById('fileInput').click()">
+                Load Image
+              </button>
+              <button type="button" class="paste-btn" onclick="pasteFromClipboard()">
+                Paste Image
+              </button>
+            </div>
+            
+            <!-- Image Layout Tip -->
+            <div class="image-tip">
+              <div class="tip-header">Image Layout Tip</div>
+              <div class="tip-content">
+                <p><strong>For best OCR results, snip the thermos like this:</strong></p>
+                <div class="tip-image-container">
+                  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" 
+                       alt="Weather data layout example" 
+                       id="tipExampleImage" 
+                       class="tip-example-image">
+                </div>
+              </div>
+            </div>
+            
+            <div id="preview"></div>
+            <div id="ocrStatus"></div>
+          </div>
+
+          <div class="form-actions">
+            <button id="analyze" type="button" class="btn primary">Analyze</button>
+            <button id="reset" type="reset" class="btn ghost">Reset</button>
+          </div>
+          
+          <!-- Validation warnings -->
+          <div id="validationWarnings" class="validation-warnings" style="display:none;"></div>
+        </form>
+      </aside>
+
+        <div class="patch-notes-card card glass" role="region" aria-label="Patch Notes">
+          <div class="patch-notes-header">
+            <h3>PATCH NOTES</h3>
+            <button id="refreshPatchNotes" class="refresh-btn" title="Refresh patch notes">⟳</button>
+          </div>
+          <div class="patch-notes-content">
+            <div id="patchNotesLoading" class="loading-indicator">Loading patch notes...</div>
+            <div id="patchNotesText" class="patch-notes-text" style="display: none;"></div>
+            <div id="patchNotesError" class="error-message" style="display: none;">Failed to load patch notes. Check connection and try again.</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="right-col" aria-live="polite">
+        <div class="thermo-card card glass" role="region" aria-label="Thermodynamics summary">
+          <div class="thermo-header">
+            <h2>Thermodynamics</h2>
+            <div class="vip">VIP</div>
+          </div>
+
+          <div class="thermo-grid">
+            <div class="stat-panel">
+              <div class="stat-row">
+              <span class="k" data- desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
+              <span class="v" id="sum_TEMP">—</span><span class="unit">F</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="CAPE (Convective Available Potential Energy) is the measure of potential energy for thunderstorms to develop. Higher CAPE indicates stronger instability and higher potential for strong storms and tornadoes.">CAPE</span>
+              <span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="0-3KM Lapse Rate: Temperature change per kilometer from the surface to 3 km. A steeper (larger) lapse rate indicates stronger low-level instability and contributes to tornado intensity and storm growth. Values up to ~10 C/km are possible on high-risk days.">0-3KM LAPSE</span>
+              <span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="PWAT (Precipitable Water) is the total water vapor in a column of air. Higher PWAT increases potential for heavy rainfall, reduced visibility, larger hail, and rain-wrapped tornadoes. PWAT < 0.9 in usually lowers rainwrap chance; PWAT > 0.9 in increases it.">PWAT</span>
+              <span class="v" id="sum_PWAT">—</span><span class="unit">IN</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="Surface Relative Humidity (RH) shows the moisture content near the ground. Higher surface RH supports storm development and intensification by keeping the boundary layer moist.">SURFACE RH</span>
+              <span class="v" id="sum_RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="Significant Tornado Parameter combines instability (CAPE), shear (SRH), and moisture (PWAT). Higher STP indicates greater potential for significant tornadoes. Game range: 0-64. MRGL: 0-2, SLGT: 3-4, ENH: 5-6, MDT: 7-10, HIGH: 11+">STP</span>
+              <span class="v" id="sum_STP">—</span><span class="unit"></span>
+              </div>
+            </div>
+
+            <div class="stat-panel">
+              <div class="stat-row">
+              <span class="k" data-desc="Dew Point indicates the temperature at which air becomes saturated and water condenses. Higher dew points are crucial for storm development because they indicate available low-level moisture.">DEWPOINT</span>
+              <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="3CAPEshows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
+              <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE</span>
+              <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="SRH (Storm-Relative Helicity) measures how much the air within a storm is spinning relative to storm motion. High SRH is a major contributor to strong tornado potential because it reflects stronger low-level rotation.">SRH</span>
+              <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="700–500 mb RH shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH</span>
+              <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
+              </div>
+              <div class="stat-row">
+              <span class="k" data-desc="Violent Tornado Parameter emphasizes extreme instability and low-level rotation. Higher VTP suggests potential for violent (EF4-EF5) tornadoes. Game range: 0-16. MRGL: 0-1, SLGT: 1, ENH: 1-2, MDT: 2, HIGH: 3+">VTP</span>
+              <span class="v" id="sum_VTP">—</span><span class="unit"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADD THE WIND ESTIMATE SECTION BACK HERE -->
+          <div id="windEstimate" class="wind-estimate-section">
+            <div class="thermo-footer">
+              <div class="wind-left">
+                <div class="wind-label" id="windLabel">No estimate yet</div>
+                <div class="ef-label">EF Scale Estimate</div>
+              </div>
+              <div class="miniwrap">
+                <canvas id="miniWind" width="600" height="20" aria-hidden="true"></canvas>
+              </div>
+            </div>
+
+            <!-- Theoretical wind estimate -->
+            <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
+
+            <!-- Wind estimate disclaimer -->
+            <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+              <strong>Note:</strong> Wind speed estimates are approximate theoretical calculations based on atmospheric parameters. Actual tornado intensity can vary significantly based on local conditions, storm dynamics, and interaction effects not captured by this simplified model. These estimates should be interpreted as general guidance rather than precise predictions.
+            </div>
+
+            <!-- Special factors -->
+            <div id="specialFactors" class="special-factors"></div>
+          </div>
+        </div>
+
+        <div class="prob-card card glass" role="region" aria-label="Probability distribution">
+          <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
+          <div class="chart-wrap">
+            <canvas id="probChart"></canvas>
+            <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <!-- Global tooltip for both thermo and chart -->
+  <div id="statTooltip" class="stat-tooltip" role="tooltip" aria-hidden="true"></div>
+
+  <footer class="app-footer">
+    <p class="disclaimer-text">
+      <strong>Disclaimer:</strong> This is a game/simulation tool for Twisted from Roblox. Tornado morphology predictions and wind speed estimates are generated by a trained machine learning model based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction.
+    </p>
+    <p style="font-size: 11px; opacity: 0.5; margin-top: 12px;">
+      <strong>Privacy:</strong> This application runs entirely in your browser. No data is sent to any server. Images uploaded or pasted for OCR processing are handled locally and not stored or transmitted.
+    </p>
+    <p>Created by: seanmike</p>
+  </footer>
+</body>
+</html>

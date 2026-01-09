@@ -301,7 +301,7 @@ This tool is made for the **Twisted game from Roblox** and should **NOT** be use
 
 ---
 
-**Version:** 3.0.0 | **License:** MIT | **Computer Model:** Random Forest (42.6% accurate)
+**Version:** 4.0.0 | **License:** MIT | **Computer Model:** SVM (98.52% accurate, R² = 0.9852)
 
 
 

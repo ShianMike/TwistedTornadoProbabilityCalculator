@@ -31,7 +31,7 @@
       errorEl.style.display = 'none';
       
       try {
-        const response = await fetch('docs/README.md');
+        const response = await fetch('docs/README.md?v=' + new Date().getTime());
         if (!response.ok) {
           throw new Error('Failed to fetch README');
         }

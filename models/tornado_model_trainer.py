@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore')
 def load_and_prepare_data():
     """Load and prepare tornado data for training"""
     # Load the CSV data with correct column names
-    df = pd.read_csv('1.21.2 Twisted Risk Study (Responses) - Form Responses 1.csv')
+    df = pd.read_csv('../data/1.21.2 Twisted Risk Study (Responses) - Form Responses 1.csv')
     
     # Print column names for debugging
     print("Available columns:", df.columns.tolist())

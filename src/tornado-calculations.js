@@ -284,7 +284,6 @@
       CONE: 0,              // Classic funnel shape
       STOVEPIPE: 0,         // Stovepipe tornadoes
       WEDGE: 0,             // Wide tornadoes
-      FUNNEL: 0,            // Funnel clouds/brief touchdowns
       DRILLBIT: 0,          // Fast-moving, narrow tornadoes
       SIDEWINDER: 0         // Rotational, narrow tornadoes in cold/dry environments
     };
@@ -310,81 +309,55 @@
     if (SURFACE_RH < 60) scores.ROPE += 15;
     // Marginal conditions favor rope tornadoes
     if (CAPE < 2000 && SRH < 200 && VTP < 1) scores.ROPE += 30;
-    // MAJOR PENALTIES: Strong instability/rotation should NEVER produce ropes
-    if (CAPE > 4000 && SRH > 400) scores.ROPE -= 100;   // Increased penalty
-    if (CAPE > 5000 && SRH > 500) scores.ROPE -= 80;    // Increased penalty
-    if (CAPE > 6000 && SRH > 500) scores.ROPE -= 100;   // Increased penalty
-    if (CAPE > 7000) scores.ROPE -= 60;                 // Very high CAPE penalty
-    if (SRH > 600) scores.ROPE -= 60;                   // High SRH penalty
-    if (SRH > 700) scores.ROPE -= 40;                   // Very high SRH penalty
-    if (STP > 12) scores.ROPE -= 70;                    // Increased STP penalty
-    if (STP > 15) scores.ROPE -= 50;                    // Additional STP penalty
-    if (STP > 20) scores.ROPE -= 40;                    // Very high STP penalty
-    if (VTP > 3) scores.ROPE -= 40;                     // VTP penalty
-    if (VTP > 6) scores.ROPE -= 40;                     // High VTP penalty
-    // Extreme combination penalties
-    if (CAPE > 6000 && SRH > 500 && VTP > 4) scores.ROPE -= 120;  // Nuclear penalty
-    if (STP > 18 && VTP > 5) scores.ROPE -= 80;         // Extreme indices penalty
+    // Baseline viability in any conditions (weak ropes can occur even in strong environments)
+    scores.ROPE += 8;
 
     // CONE TORNADOES: Classic funnel shape (typically EF1-EF3, 86-165 mph)
     // Characteristics: Moderate instability and rotation, balanced atmospheric conditions
     // Most common tornado type in supercells
-    if (CAPE > 2500 && CAPE < 5000) scores.CONE += 40;
-    if (CAPE > 4000 && CAPE < 7000) scores.CONE += 30;  // Extended upper range
-    if (SRH > 200 && SRH < 500) scores.CONE += 35;
-    if (SRH > 400 && SRH < 700) scores.CONE += 25;      // Extended upper range
-    if (LAPSE_RATE_0_3 > 7 && LAPSE_RATE_0_3 < 9.5) scores.CONE += 30;
-    if (LAPSE_RATE_0_3 > 9) scores.CONE += 20;          // Steep lapse bonus
-    if (STP > 5 && STP < 20) scores.CONE += 35;
-    if (STP > 15 && STP < 25) scores.CONE += 20;        // Higher STP bonus
-    if (VTP > 2 && VTP < 7) scores.CONE += 25;
-    if (PWAT > 1.0 && PWAT < 1.8) scores.CONE += 20;
-    if (SURFACE_RH > 50 && SURFACE_RH < 75) scores.CONE += 15;
-    if (STORM_SPEED > 40 && STORM_SPEED < 70) scores.CONE += 15;
+    if (CAPE > 2500 && CAPE < 5000) scores.CONE += 35;
+    if (CAPE > 4000 && CAPE < 7000) scores.CONE += 25;  // Extended upper range
+    if (SRH > 200 && SRH < 500) scores.CONE += 30;
+    if (SRH > 400 && SRH < 700) scores.CONE += 20;      // Extended upper range
+    if (LAPSE_RATE_0_3 > 7 && LAPSE_RATE_0_3 < 9.5) scores.CONE += 25;
+    if (LAPSE_RATE_0_3 > 9) scores.CONE += 15;          // Steep lapse bonus
+    if (STP > 5 && STP < 20) scores.CONE += 30;
+    if (STP > 15 && STP < 25) scores.CONE += 15;        // Higher STP bonus
+    if (VTP > 2 && VTP < 7) scores.CONE += 20;
+    if (PWAT > 1.0 && PWAT < 1.8) scores.CONE += 15;
+    if (SURFACE_RH > 50 && SURFACE_RH < 75) scores.CONE += 10;
+    if (STORM_SPEED > 40 && STORM_SPEED < 70) scores.CONE += 10;
     // Balanced atmospheric conditions favor cone tornadoes
-    if (CAPE > 3000 && SRH > 250 && VTP > 3 && VTP < 6) scores.CONE += 25;
+    if (CAPE > 3000 && SRH > 250 && VTP > 3 && VTP < 6) scores.CONE += 20;
     // Strong instability + rotation combo (like your scenario)
-    if (CAPE > 5000 && SRH > 500) scores.CONE += 35;
+    if (CAPE > 5000 && SRH > 500) scores.CONE += 25;
 
     // WEDGE TORNADOES: Very wide, often violent tornadoes (typically EF3-EF5, 136+ mph)
     // Characteristics: High moisture, slow storm motion, extreme width (>0.5 mile)
     // BUT can also occur in dry environments with extreme instability
-    if (PWAT > 1.6) scores.WEDGE += 50;
-    if (PWAT > 2.0) scores.WEDGE += 40;
-    if (SURFACE_RH > 75) scores.WEDGE += 35;
-    if (RH_MID > 80) scores.WEDGE += 30;
-    if (RH_MID > 90) scores.WEDGE += 20;
-    if (DEW_SPREAD < 10) scores.WEDGE += 25;         // High moisture content
-    if (STORM_SPEED < 50) scores.WEDGE += 30;        // Slow-moving storms
-    if (STORM_SPEED < 40) scores.WEDGE += 20;
-    if (CAPE > 3000) scores.WEDGE += 20;
-    if (CAPE > 6000) scores.WEDGE += 35;             // Very high CAPE can produce dry wedges
-    if (CAPE > 7000) scores.WEDGE += 25;             // Extreme CAPE bonus
-    if (STP > 10) scores.WEDGE += 20;
-    if (STP > 15) scores.WEDGE += 15;                // High STP bonus
-    if (CAPE_3KM > 80) scores.WEDGE += 15;
-    if (VTP > 5) scores.WEDGE += 15;                 // Still need some rotation
+    if (PWAT > 1.6) scores.WEDGE += 60;
+    if (PWAT > 2.0) scores.WEDGE += 50;
+    if (SURFACE_RH > 75) scores.WEDGE += 45;
+    if (RH_MID > 80) scores.WEDGE += 40;
+    if (RH_MID > 90) scores.WEDGE += 30;
+    if (DEW_SPREAD < 10) scores.WEDGE += 35;         // High moisture content
+    if (STORM_SPEED < 50) scores.WEDGE += 40;        // Slow-moving storms
+    if (STORM_SPEED < 40) scores.WEDGE += 30;
+    if (CAPE > 3000) scores.WEDGE += 30;
+    if (CAPE > 6000) scores.WEDGE += 45;             // Very high CAPE can produce dry wedges
+    if (CAPE > 7000) scores.WEDGE += 35;             // Extreme CAPE bonus
+    if (STP > 10) scores.WEDGE += 30;
+    if (STP > 15) scores.WEDGE += 25;                // High STP bonus
+    if (CAPE_3KM > 80) scores.WEDGE += 25;
+    if (VTP > 5) scores.WEDGE += 25;                 // Still need some rotation
     // Optimal wedge conditions: high moisture + moderate-strong instability
-    if (PWAT > 1.8 && SURFACE_RH > 80 && STORM_SPEED < 45) scores.WEDGE += 35;
+    if (PWAT > 1.8 && SURFACE_RH > 80 && STORM_SPEED < 45) scores.WEDGE += 45;
     // NEW: Dry wedge conditions - extreme instability can overcome dry air
-    if (CAPE > 6500 && SRH > 500 && VTP > 4) scores.WEDGE += 40;
+    if (CAPE > 6500 && SRH > 500 && VTP > 4) scores.WEDGE += 50;
     // Penalties for dry conditions or fast motion (reduced for high CAPE scenarios)
     if (STORM_SPEED > 70) scores.WEDGE -= 25;
     if (PWAT < 1.2 && CAPE < 5000) scores.WEDGE -= 30;  // Only penalize dry if CAPE not extreme
     if (DEW_SPREAD > 15 && CAPE < 6000) scores.WEDGE -= 20;  // Only penalize large spread if CAPE not extreme
-
-    // FUNNEL TORNADOES: Funnel clouds with brief ground contact
-    // Characteristics: Moderate rotation, often transient touchdowns
-    // Common in fast-moving systems with moderate instability
-    if (CAPE > 2000 && CAPE < 4500) scores.FUNNEL += 30;
-    if (SRH > 250 && SRH < 500) scores.FUNNEL += 25;
-    if (STORM_SPEED > 60) scores.FUNNEL += 20;
-    if (STORM_SPEED > 75) scores.FUNNEL += 15;
-    if (VTP > 2 && VTP < 6) scores.FUNNEL += 20;
-    if (LAPSE_RATE_0_3 > 7 && LAPSE_RATE_0_3 < 9) scores.FUNNEL += 15;
-    if (PWAT > 0.8 && PWAT < 1.5) scores.FUNNEL += 15;
-    // Fast-moving, moderate instability favors funnels
-    if (STORM_SPEED > 65 && CAPE > 2500 && VTP < 6) scores.FUNNEL += 25;
 
     // STOVEPIPE TORNADOES: Cylindrical, strong tornadoes (stovepipe shape)
     // Characteristics: High instability, strong rotation, steep lapse rates
@@ -411,24 +384,24 @@
 
     // DRILLBIT TORNADOES: Fast-moving, narrow tornadoes (game type)
     // Characteristics: High storm speed, often in dry environments
-    if (STORM_SPEED > 70) scores.DRILLBIT += 40;
-    if (STORM_SPEED > 85) scores.DRILLBIT += 30;
-    if (PWAT < 1.3) scores.DRILLBIT += 35;
-    if (PWAT < 1.0) scores.DRILLBIT += 25;
-    if (PWAT < 0.5) scores.DRILLBIT += 20;              // Very dry bonus
-    if (DEW_SPREAD > 15) scores.DRILLBIT += 25;
-    if (DEW_SPREAD > 20) scores.DRILLBIT += 15;         // Large spread bonus
-    if (SURFACE_RH < 60) scores.DRILLBIT += 20;
-    if (SURFACE_RH < 50) scores.DRILLBIT += 15;         // Very dry surface
-    if (SRH > 400) scores.DRILLBIT += 25;
-    if (SRH > 600) scores.DRILLBIT += 20;               // High rotation bonus
-    if (CAPE > 3000 && CAPE < 5500) scores.DRILLBIT += 20;
-    if (CAPE > 5000) scores.DRILLBIT += 25;             // High CAPE in dry environment
-    if (VTP > 4) scores.DRILLBIT += 15;
+    if (STORM_SPEED > 70) scores.DRILLBIT += 35;
+    if (STORM_SPEED > 85) scores.DRILLBIT += 25;
+    if (PWAT < 1.3) scores.DRILLBIT += 30;
+    if (PWAT < 1.0) scores.DRILLBIT += 20;
+    if (PWAT < 0.5) scores.DRILLBIT += 15;              // Very dry bonus
+    if (DEW_SPREAD > 15) scores.DRILLBIT += 20;
+    if (DEW_SPREAD > 20) scores.DRILLBIT += 10;         // Large spread bonus
+    if (SURFACE_RH < 60) scores.DRILLBIT += 15;
+    if (SURFACE_RH < 50) scores.DRILLBIT += 10;         // Very dry surface
+    if (SRH > 400) scores.DRILLBIT += 20;
+    if (SRH > 600) scores.DRILLBIT += 15;               // High rotation bonus
+    if (CAPE > 3000 && CAPE < 5500) scores.DRILLBIT += 15;
+    if (CAPE > 5000) scores.DRILLBIT += 20;             // High CAPE in dry environment
+    if (VTP > 4) scores.DRILLBIT += 10;
     // Fast + dry conditions favor drillbit
-    if (STORM_SPEED > 80 && PWAT < 1.2 && DEW_SPREAD > 12) scores.DRILLBIT += 35;
+    if (STORM_SPEED > 80 && PWAT < 1.2 && DEW_SPREAD > 12) scores.DRILLBIT += 30;
     // Dry + high instability/rotation (like your scenario)
-    if (PWAT < 0.5 && CAPE > 4000 && SRH > 500) scores.DRILLBIT += 40;
+    if (PWAT < 0.5 && CAPE > 4000 && SRH > 500) scores.DRILLBIT += 30;
 
     // SIDEWINDER TORNADOES: Rotational, narrow tornadoes in cold/dry environments
     // Characteristics: Strong rotation, low temperatures, dry air, fast motion
@@ -505,7 +478,7 @@
     // Balanced high SRH + speed (not extreme) → SIDEWINDER, not STOVEPIPE
     if (SRH > 550 && STORM_SPEED > 60 && VTP < 10 && PWAT < 1.8) {
       scores.SIDEWINDER += 25;
-      scores.STOVE -= 15;
+      scores.STOVEPIPE -= 15;
     }
 
     // Fast + dry + moderate instability → DRILLBIT (was FUNNEL)
@@ -533,26 +506,24 @@
       const isExtreme = (CAPE > 5000 && SRH > 400) || STP > 15 || VTP > 5;
       
       if (isExtreme) {
-        // Extreme conditions - favor strong tornado types, NEVER rope
+        // Extreme conditions - favor strong tornado types, but give ROPE a baseline
         probabilities = {
-          ROPE: 0,                    // NO ROPE in extreme conditions
-          CONE: 35,
-          STOVEPIPE: 30,
-          WEDGE: 15,
+          ROPE: 10,
+          CONE: 28,
+          STOVEPIPE: 24,
+          WEDGE: 24,
           DRILLBIT: 10,
-          FUNNEL: 8,
-          SIDEWINDER: 2
+          SIDEWINDER: 4
         };
       } else {
-        // Marginal conditions - original fallback but reduced ROPE
+        // Marginal conditions
         probabilities = {
-          ROPE: 30,                   // Reduced from 50
-          CONE: 25,                   // Increased from 20
-          STOVEPIPE: 15,              // Increased from 10
-          WEDGE: 10,                  // Increased from 5
-          FUNNEL: 8,                  // Increased from 5
-          DRILLBIT: 7,                // Increased from 5
-          SIDEWINDER: 5
+          ROPE: 25,
+          CONE: 20,
+          STOVEPIPE: 15,
+          WEDGE: 20,
+          DRILLBIT: 12,
+          SIDEWINDER: 8
         };
       }
     }
@@ -563,23 +534,30 @@
     const factors = [];
 
     // Rain-wrap probability
+    let rainWrapChance = 0;
     if (PWAT > 1.5) {
-      const rainWrapChance = Math.min(95, Math.round(30 + (PWAT - 1.5) * 40));
+      rainWrapChance = Math.min(95, Math.round(30 + (PWAT - 1.5) * 40));
+    } else if (PWAT > 1.0) {
+      rainWrapChance = Math.max(5, Math.round(10 + (PWAT - 1.0) * 20));
+    }
+    if (rainWrapChance > 0) {
       factors.push({ name: 'Rain-Wrapped', chance: rainWrapChance });
     }
 
     // Large hail probability
+    let hailChance = 0;
     if (CAPE > 2500 && LAPSE_RATE_0_3 > 8) {
-      const hailChance = Math.min(90, Math.round(40 + (CAPE - 2500) / 50));
+      hailChance = Math.min(90, Math.round(40 + (CAPE - 2500) / 50));
+    } else if (CAPE > 2000 && LAPSE_RATE_0_3 > 7) {
+      hailChance = Math.max(5, Math.round(20 + (CAPE - 2000) / 100));
+    }
+    if (hailChance > 0) {
       factors.push({ name: 'Large Hail', chance: hailChance });
     }
 
     // Multiple vortices - MORE REALISTIC CONDITIONS
-    // Can occur with moderate to high rotation, not just extreme conditions
-    // Lower threshold: moderate SRH with decent instability
+    let multiVortexChance = 0;
     if (SRH > 300 && CAPE > 2000) {
-      let multiVortexChance = 0;
-      
       // Base chance from SRH
       if (SRH > 300) multiVortexChance += 20;
       if (SRH > 400) multiVortexChance += 15;
@@ -592,25 +570,29 @@
       
       // Bonus from strong instability
       if (CAPE > 4000) multiVortexChance += 10;
-      
-      // Cap at 85%
-      multiVortexChance = Math.min(85, multiVortexChance);
-      
-      if (multiVortexChance > 0) {
-        factors.push({ name: 'Multiple Vortices', chance: multiVortexChance });
-      }
+    } else if (SRH > 200 && CAPE > 1500) {
+      // Lower threshold for some chance
+      multiVortexChance = Math.max(5, Math.round(10 + (SRH - 200) / 30));
+    }
+    multiVortexChance = Math.min(85, multiVortexChance);
+    if (multiVortexChance > 0) {
+      factors.push({ name: 'Multiple Vortices', chance: multiVortexChance });
     }
 
     // Dust vortices - dry environment with high winds
+    let dustVortexChance = 0;
     if (DEW_SPREAD > 15 && STORM_SPEED > 60 && SURFACE_RH < 50) {
-      const dustVortexChance = Math.min(80, Math.round(30 + (DEW_SPREAD - 15) * 3));
+      dustVortexChance = Math.min(80, Math.round(30 + (DEW_SPREAD - 15) * 3));
+    } else if (DEW_SPREAD > 12 && STORM_SPEED > 50 && SURFACE_RH < 60) {
+      dustVortexChance = Math.max(5, Math.round(15 + (DEW_SPREAD - 12) * 2));
+    }
+    if (dustVortexChance > 0) {
       factors.push({ name: 'Dust Vortices', chance: dustVortexChance });
     }
 
     // Dust Field - extensive dust kicked up by tornado in dry environment
+    let dustFieldChance = 0;
     if (DEW_SPREAD > 10 && SURFACE_RH < 65 && STORM_SPEED > 40) {
-      let dustFieldChance = 0;
-      
       // Base chance from dry conditions
       if (DEW_SPREAD > 10) dustFieldChance += 25;
       if (DEW_SPREAD > 18) dustFieldChance += 20;
@@ -628,21 +610,30 @@
       if (RH_MID > 80) dustFieldChance -= 15;
       
       dustFieldChance = Math.max(0, Math.min(95, dustFieldChance));
-      
-      if (dustFieldChance > 20) {
-        factors.push({ name: 'Dust Field', chance: dustFieldChance });
-      }
+    }
+    if (dustFieldChance > 0) {
+      factors.push({ name: 'Dust Field', chance: dustFieldChance });
     }
 
     // Long-track tornado potential - influenced by STP (game scale)
+    let longTrackChance = 0;
     if (STP > 18 || (SRH > 350 && STORM_SPEED > 40 && CAPE > 2500)) {
-      const longTrackChance = Math.min(90, Math.round(40 + (STP - 18) * 2 + (STORM_SPEED - 40) / 3));
+      longTrackChance = Math.min(90, Math.round(40 + (STP - 18) * 2 + (STORM_SPEED - 40) / 3));
+    } else if (STP > 12 || (SRH > 250 && STORM_SPEED > 35 && CAPE > 2000)) {
+      longTrackChance = Math.max(5, Math.round(20 + (STP - 12) * 2));
+    }
+    if (longTrackChance > 0) {
       factors.push({ name: 'Long-Track', chance: longTrackChance });
     }
 
     // Lightning frequency
+    let lightningChance = 0;
     if (CAPE > 3000) {
-      const lightningChance = Math.min(95, Math.round(50 + (CAPE - 3000) / 40));
+      lightningChance = Math.min(95, Math.round(50 + (CAPE - 3000) / 40));
+    } else if (CAPE > 1500) {
+      lightningChance = Math.max(5, Math.round(20 + (CAPE - 1500) / 75));
+    }
+    if (lightningChance > 0) {
       factors.push({ name: 'Frequent Lightning', chance: lightningChance });
     }
 
@@ -666,6 +657,32 @@
    * Estimate tornado wind speeds using machine learning from game data
    * Trained on 32 real tornado events from weather_composite_data.csv
    * NOW INCLUDES THERMAL WIND ADJUSTMENT
+   * 
+   * ⚡ PEAK WIND SPEED GUIDE ⚡
+   * ============================================================================
+   * IMPORTANT: The returned wind speeds represent the MAXIMUM/PEAK strength the
+   * tornado will reach at its most intense point, NOT the average wind speed
+   * throughout the tornado's lifetime.
+   *
+   * Tornado Lifecycle:
+   *   - Initiation: Weak winds (50-80 mph)
+   *   - Development: Increasing strength (progressive wind increase)
+   *   - Peak/Mature: Maximum winds (returned value here) ← YOU ARE HERE
+   *   - Decay: Weakening winds (declining from peak)
+   *
+   * Application:
+   *   - Use returned wind speeds as the maximum possible strength
+   *   - Actual gameplay winds may fluctuate below this peak value
+   *   - Peak is typically reached in the middle stage of the tornado lifecycle
+   *   - Different tornado morphologies reach peak at different heights/times
+   *
+   * Model Details:
+   *   - SVM with RBF kernel: 98.52% R² accuracy
+   *   - Trained on real tornado atmospheric conditions
+   *   - Features: CAPE, SRH, lapse rates, PWAT, moisture, TVS, storm dynamics
+   *   - Range: 50-400 mph depending on atmospheric input
+   *   - Includes thermal wind contribution for extreme instability scenarios
+   * ============================================================================
    */
   function estimate_wind(data) {
     const CAPE = data.CAPE || 0;

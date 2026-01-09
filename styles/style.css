@@ -234,12 +234,51 @@ input:focus{
 /* validation warnings */
 .validation-warnings {
   margin-top: 14px;
-  padding: 12px 14px;
-  background: rgba(255, 152, 0, 0.08);
-  border: 1px solid rgba(255, 152, 0, 0.25);
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.validation-message {
+  padding: 11px 13px;
   border-radius: 8px;
+  border-left: 4px solid;
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* CRITICAL severity - red/dark red */
+.severity-critical {
+  background: rgba(211, 47, 47, 0.12);
+  border-left-color: #d32f2f;
+  color: #ff6f6f;
+}
+
+/* ERROR severity - orange/amber */
+.severity-error {
+  background: rgba(245, 127, 23, 0.12);
+  border-left-color: #f57f17;
+  color: #ffb74d;
+}
+
+/* WARNING severity - yellow/gold */
+.severity-warning {
+  background: rgba(255, 152, 0, 0.12);
+  border-left-color: #ff9800;
+  color: #ffc107;
+}
+
+/* INFO severity - cyan/blue */
+.severity-info {
+  background: rgba(30, 136, 229, 0.12);
+  border-left-color: #1e88e5;
+  color: #64b5f6;
 }
 
 .warning-item {
@@ -402,50 +441,53 @@ input:focus{
 /* Special factors styling */
 .special-factors,
 #specialFactors {
-  margin-top: 12px; /* Increased from 8px */
-  padding: 10px 14px; /* Increased padding */
-  background: rgba(255, 255, 255, 0.03);
+  margin: 0;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 6px;
-  font-size: 12px; /* Increased from 10px */
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.8;
   color: #a0aec0;
   position: relative;
   display: block;
+  flex: 1;
 }
 
 .special-factors strong,
 #specialFactors strong {
   color: #ffffff;
   font-weight: 700;
-  font-size: 13px; /* Increased */
+  font-size: 13px;
 }
 
 /* Theoretical wind styling */
 .theoretical-wind,
 #theoreticalWind {
-  margin-top: 10px; /* Increased from 6px */
-  padding: 10px 14px; /* Increased padding */
+  margin: 0;
+  padding: 10px 14px;
   background: rgba(233, 30, 99, 0.1);
-  border-left: 3px solid #e91e63; /* Thicker border */
+  border-left: 3px solid #e91e63;
   border-radius: 4px;
-  font-size: 12px; /* Increased from 10px */
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.4;
   color: #f8b4d0;
   position: relative;
   display: block;
+  height: fit-content;
 }
 
 /* Wind disclaimer styling */
 .wind-disclaimer,
 #windDisclaimer {
-  margin-top: 10px; /* Increased from 6px */
-  padding: 10px 14px; /* Increased padding */
+  margin: 0;
+  padding: 10px 14px;
   background: rgba(255, 193, 7, 0.08);
-  border-left: 3px solid #ffc107; /* Thicker border */
+  border-left: 3px solid #ffc107;
   border-radius: 4px;
-  font-size: 11px; /* Increased from 9px */
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.4;
   color: #ffe082;
+  height: fit-content;
 }
 
 #windDisclaimer strong {
@@ -461,7 +503,9 @@ input:focus{
   border-radius: 16px;
   position: relative;
   margin-bottom: 0;
-  height: fit-content;
+  height: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* patch notes card styling */
@@ -971,3 +1015,4 @@ canvas{display:block;width:100% !important;height:auto !important;pointer-events
 .card, .btn, input, .stat-tooltip, .tornado-tooltip, .special-factors, #specialFactors, .theoretical-wind, #theoreticalWind, #riskBadge {
   transition: box-shadow 0.2s, background 0.2s, border 0.2s, color 0.2s;
 }
+

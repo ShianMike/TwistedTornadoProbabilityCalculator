@@ -1,6 +1,6 @@
 {
-  "model_type": "SVR",
-  "model_name": "SVM",
+  "model_type": "RandomForestRegressor",
+  "model_name": "Random Forest",
   "feature_names": [
     "CAPE",
     "SRH",
@@ -15,28 +15,41 @@
     "Storm_Motion",
     "Total_TVS_Peaks"
   ],
-  "test_r2_score": 0.9852468566708288,
-  "test_rmse": 4.6130178774850314,
-  "test_mae": 3.8561540894367057,
-  "cv_mean_r2": 0.9672841305954074,
-  "cv_std_r2": 0.03473958296004238,
-  "feature_importance": {},
-  "training_date": "2026-01-09T12:12:21.883398",
+  "test_r2_score": 0.9015951757752518,
+  "test_rmse": 11.05560573017212,
+  "test_mae": 9.066349770338363,
+  "cv_mean_r2": 0.8639288549319792,
+  "cv_std_r2": 0.042027032022971124,
+  "feature_importance": {
+    "CAPE": 0.5484408874988248,
+    "SRH": 0.33097295511334984,
+    "Lapse_0_3km": 0.013694576359731932,
+    "PWAT": 0.005269612187892666,
+    "Temperature": 0.008191910261682383,
+    "Dewpoint": 0.00975192085272334,
+    "CAPE_3km": 0.012572380430189559,
+    "Lapse_3_6km": 0.01145106656593937,
+    "Surface_RH": 0.017438778306418386,
+    "RH_700_500": 0.007624381868354326,
+    "Storm_Motion": 0.017583647378527256,
+    "Total_TVS_Peaks": 0.017007883176366204
+  },
+  "training_date": "2026-01-09T16:23:28.327789",
   "model_version": "4.0",
   "all_models_tested": [
-    "SVM",
     "Random Forest",
-    "Ridge",
     "Gradient Boosting",
     "AdaBoost",
+    "Ridge",
+    "SVM",
     "Neural Network"
   ],
   "all_models_r2_scores": {
-    "SVM": 0.9852468566708288,
-    "Random Forest": 0.982637137756517,
-    "Ridge": 0.9749241050117566,
-    "Gradient Boosting": 0.9697583213610688,
-    "AdaBoost": 0.9613634713940834,
-    "Neural Network": -6.0609846825657225
+    "Random Forest": 0.9015951757752518,
+    "Gradient Boosting": 0.8953732291535969,
+    "AdaBoost": 0.8794083174167491,
+    "Ridge": 0.8198135067351826,
+    "SVM": 0.6304395199145293,
+    "Neural Network": 0.17752017422558541
   }
 }

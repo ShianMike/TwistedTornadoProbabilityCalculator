@@ -223,7 +223,7 @@
     // Draw main bar with modern radius - positioned lower to make room for text
     const radius = 6; /* Increased from 4 for modern look */
     const barTop = 12; // Start bar lower to make room for text
-    const barHeight = displayHeight - barTop - 2;
+    const barHeight = displayHeight - barTop + 3;
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(0, barTop, displayWidth, barHeight, radius);
@@ -291,24 +291,17 @@
     ctx.shadowOffsetY = 1;
 
     // Speed range labels positioned in upper portion of canvas
-    ctx.font = '600 12px Inter, sans-serif'; // Increased by 2px
-    ctx.letterSpacing = '-0.02em';
+    ctx.font = '600 12px Inter, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.letterSpacing = '0';
     
-    // Min wind label (left-aligned above min position)
-    ctx.textAlign = 'left';
-    const minText = `${estimate.est_min}`;
-    ctx.fillText(minText, minPos, 1); // Position near top
-    
-    // Max wind label (right-aligned above max position)  
-    ctx.textAlign = 'right';
-    const maxText = `${estimate.est_max}`;
-    ctx.fillText(maxText, maxPos, 1); // Position near top
-    
-    // MPH label in center
+    // Min speed centered on min bar
     ctx.textAlign = 'center';
-    ctx.font = '400 10px Inter, sans-serif'; // Increased by 2px
-    const centerX = (minPos + maxPos) / 2;
-    ctx.fillText('mph', centerX, 1);
+    ctx.fillText(`${estimate.est_min}`, minPos, -2);
+    
+    // Max speed centered on max bar
+    ctx.textAlign = 'center';
+    ctx.fillText(`${estimate.est_max}`, maxPos, -2);
 
     // Add thermal wind indicator if present and significant
     if (estimate.thermalContribution && estimate.thermalContribution > 5) {

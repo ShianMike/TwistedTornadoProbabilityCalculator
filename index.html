@@ -38,20 +38,20 @@
         
         const markdownText = await response.text();
         
-        // Extract patch notes section (from "What's New" onwards)
-        const patchNotesStart = markdownText.indexOf('## 📝 What\'s New');
-        if (patchNotesStart === -1) {
-          throw new Error('Patch notes section not found');
+        // Extract version history section (starts at "## Version History")
+        const versionStart = markdownText.indexOf('## Version History');
+        if (versionStart === -1) {
+          throw new Error('Version History section not found');
         }
         
-        // Find the end of patch notes (before next major section)
-        const patchNotesEnd = markdownText.indexOf('## 🎮 Usage Tips', patchNotesStart);
-        const patchNotesSection = patchNotesEnd > -1 
-          ? markdownText.substring(patchNotesStart, patchNotesEnd)
-          : markdownText.substring(patchNotesStart);
+        // Find the end of version history (next major section or end of file)
+        const nextSection = markdownText.indexOf('## Usage Guidelines', versionStart);
+        const versionHistorySection = nextSection > -1 
+          ? markdownText.substring(versionStart, nextSection)
+          : markdownText.substring(versionStart);
         
         // Convert markdown to HTML (basic conversion)
-        const htmlContent = convertMarkdownToHtml(patchNotesSection);
+        const htmlContent = convertMarkdownToHtml(versionHistorySection);
         
         textEl.innerHTML = htmlContent;
         loadingEl.style.display = 'none';
@@ -89,169 +89,8 @@
       
       // Add refresh button functionality
       document.getElementById('refreshPatchNotes').addEventListener('click', loadPatchNotes);
-      
-      // Add save PNG functionality
-      document.getElementById('savePNG').addEventListener('click', capturePNG);
     });
-    
-    // PNG Capture functionality
-    async function capturePNG() {
-      const saveBtn = document.getElementById('savePNG');
-      const originalText = saveBtn.textContent;
-      
-      try {
-        saveBtn.textContent = 'Capturing...';
-        saveBtn.disabled = true;
-        
-        // Find the analysis elements
-        const thermoCard = document.querySelector('.thermo-card');
-        const probCard = document.querySelector('.prob-card');
-        
-        if (!thermoCard || !probCard) {
-          alert('Please run an analysis first to generate results to capture.');
-          return;
-        }
-        
-        // Create a visible container for debugging
-        const captureContainer = document.createElement('div');
-        captureContainer.style.cssText = `
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 1200px;
-          min-height: 800px;
-          background: #1f2937;
-          color: #e6eef6;
-          font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-          padding: 20px;
-          border-radius: 16px;
-          z-index: 9999;
-        `;
-        
-        // Clone and style the thermodynamics card
-        const thermoClone = thermoCard.cloneNode(true);
-        thermoClone.style.cssText = `
-          background: #374151;
-          border: 1px solid #4b5563;
-          border-radius: 12px;
-          padding: 20px;
-          margin-bottom: 20px;
-          color: #e6eef6;
-        `;
-        
-        // Clone the probability card
-        const probClone = probCard.cloneNode(true);
-        probClone.style.cssText = `
-          background: #374151;
-          border: 1px solid #4b5563;
-          border-radius: 12px;
-          padding: 20px;
-          color: #e6eef6;
-        `;
-        
-        // Replace canvas elements with their rendered content
-        const originalCanvas = document.getElementById('probChart');
-        const originalMiniCanvas = document.getElementById('miniWind');
-        
-        if (originalCanvas) {
-          const canvasImg = document.createElement('img');
-          canvasImg.src = originalCanvas.toDataURL();
-          canvasImg.style.cssText = `
-            width: 100%; 
-            height: 350px; 
-            max-width: none;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-          `;
-          
-          const clonedCanvas = probClone.querySelector('canvas');
-          if (clonedCanvas) {
-            // Wrap in container to preserve chart layout
-            const chartContainer = document.createElement('div');
-            chartContainer.style.cssText = `
-              position: relative;
-              width: 100%;
-              height: 350px;
-              overflow: hidden;
-            `;
-            chartContainer.appendChild(canvasImg);
-            clonedCanvas.parentNode.replaceChild(chartContainer, clonedCanvas);
-          }
-        }
-        
-        if (originalMiniCanvas) {
-          const miniImg = document.createElement('img');
-          miniImg.src = originalMiniCanvas.toDataURL();
-          miniImg.style.cssText = `
-            width: 100%; 
-            height: 28px;
-            display: block;
-            margin: 8px 0;
-            image-rendering: crisp-edges;
-          `;
-          
-          const clonedMiniCanvas = thermoClone.querySelector('#miniWind') || thermoClone.querySelector('canvas');
-          if (clonedMiniCanvas) {
-            // Create a container div for better spacing
-            const windContainer = document.createElement('div');
-            windContainer.style.cssText = `
-              padding: 8px 0;
-              margin: 8px 0;
-            `;
-            windContainer.appendChild(miniImg);
-            clonedMiniCanvas.parentNode.replaceChild(windContainer, clonedMiniCanvas);
-          }
-        }
-        
-        captureContainer.appendChild(thermoClone);
-        captureContainer.appendChild(probClone);
-        
-        // Add to document
-        document.body.appendChild(captureContainer);
-        
-        // Wait for rendering
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Capture with simpler settings
-        const canvas = await html2canvas(captureContainer, {
-          backgroundColor: '#1f2937',
-          scale: 1,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          width: 1200,
-          height: captureContainer.offsetHeight
-        });
-        
-        // Create download
-        const link = document.createElement('a');
-        link.download = `twisted-analysis-${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up
-        document.body.removeChild(captureContainer);
-        
-        saveBtn.textContent = 'Saved!';
-        setTimeout(() => {
-          saveBtn.textContent = originalText;
-        }, 2000);
-        
-      } catch (error) {
-        console.error('Capture error:', error);
-        alert(`Capture failed: ${error.message}`);
-        saveBtn.textContent = 'Error';
-        setTimeout(() => {
-          saveBtn.textContent = originalText;
-        }, 2000);
-      } finally {
-        saveBtn.disabled = false;
-      }
-    }
+
   </script>
 </head>
 <body>
@@ -263,7 +102,6 @@
           <p class="subtitle">Enter parameters and analyze tornado morphology probability</p>
         </div>
         <div class="header-right">
-          <button id="savePNG" type="button" class="btn secondary capture-btn">Capture/Save Thermos & Tornado Type as PNG</button>
         </div>
       </div>
     </header>
@@ -273,8 +111,10 @@
         <aside class="left-col card glass">
           <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
             <h2>Inputs</h2>
-
-          <div class="grid-2">
+            
+            <!-- TWO COLUMN INPUT LAYOUT -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            
             <!-- LEFT COLUMN INPUTS -->
             <div class="input-panel">
               <div class="input-row">
@@ -334,7 +174,7 @@
                 <input id="VTP" type="number" step="0.1" min="0" max="16" placeholder="">
               </div>
             </div>
-          </div>
+            </div>
 
           <!-- Image Upload Section with improved layout -->
           <div class="upload-section">
@@ -466,24 +306,34 @@
               </div>
             </div>
 
-            <!-- Theoretical wind estimate -->
-            <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
+            <!-- Theoretical wind estimate and wind guide in same row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+              <!-- Theoretical wind estimate -->
+              <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
 
-            <!-- Wind estimate disclaimer -->
-            <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
-              <strong>Note:</strong> Wind speed estimates are approximate theoretical calculations based on atmospheric parameters. Actual tornado intensity can vary significantly based on local conditions, storm dynamics, and interaction effects not captured by this simplified model. These estimates should be interpreted as general guidance rather than precise predictions.
+              <!-- Wind estimate disclaimer -->
+              <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+                <strong>Wind Speed Guide:</strong> 
+                The estimated wind speeds represent the <strong>maximum strength (peak winds)</strong> the tornado reaches at its most intense point, not average winds. Tornadoes fluctuate in intensity over their lifespan. These estimates are based on atmospheric parameters using a machine learning model.
+              </div>
             </div>
-
-            <!-- Special factors -->
-            <div id="specialFactors" class="special-factors"></div>
           </div>
         </div>
 
-        <div class="prob-card card glass" role="region" aria-label="Probability distribution">
-          <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
-          <div class="chart-wrap">
-            <canvas id="probChart"></canvas>
-            <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+        <!-- Probability distribution and special factors in same row -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+          <div class="prob-card card glass" role="region" aria-label="Probability distribution">
+            <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
+            <div class="chart-wrap">
+              <canvas id="probChart"></canvas>
+              <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- Special factors as graph-like card -->
+          <div class="prob-card card glass" role="region" aria-label="Special tornado factors">
+            <h3>SPECIAL FACTORS</h3>
+            <div id="specialFactors" class="special-factors"></div>
           </div>
         </div>
       </section>

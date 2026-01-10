@@ -46,6 +46,41 @@ html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6}
   flex: 0 0 auto;
 }
 
+/* Data Gathering Link */
+.data-gathering-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(56, 142, 60, 0.08));
+  border: 1px solid rgba(76, 175, 80, 0.25);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  align-items: center;
+}
+
+.data-gathering-link:hover {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(56, 142, 60, 0.12));
+  border-color: rgba(76, 175, 80, 0.4);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+  transform: translateY(-2px);
+}
+
+.link-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #66bb6a;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.link-description {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.3;
+}
+
 .capture-btn {
   font-size: 12px;
   padding: 8px 16px;

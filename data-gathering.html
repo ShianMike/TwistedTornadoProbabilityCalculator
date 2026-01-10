@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tornado Data Gathering Tool</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/data-gathering.css">
+  
+  <!-- Load scripts with defer -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="src/data-gathering.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>Tornado Data Gathering Tool</h1>
+          <p class="subtitle">Record tornado observations using OCR reading and manual classification</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="data-gathering-full">
+      <div class="ocr-and-params-container">
+        <!-- OCR SECTION -->
+        <div class="ocr-section card glass">
+          <h2>OCR Image Input</h2>
+          <p class="section-subtitle">Upload an image or paste from clipboard for automatic text extraction</p>
+          
+          <div class="upload-area">
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+              📁 Upload Image
+            </button>
+            <button class="btn btn-secondary" onclick="pasteFromClipboard()">
+              📋 Paste from Clipboard
+            </button>
+          <button class="btn btn-secondary" onclick="clearOCRInput()">
+            🗑️ Clear Image
+          </button>
+        </div>
+
+        <div id="preview" class="preview-area">
+          <div class="preview-placeholder">
+            <div class="preview-guide">
+              <p class="guide-text">Capture or paste a screenshot of weather data parameters (TEMP, CAPE, PWAT, etc.) for automatic extraction</p>
+              <div class="guide-image-container">
+                <img src="assets/example-layout.png" alt="Example of how to capture weather data" class="guide-example-image">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="ocrStatus" class="status-message"></div>
+        </div>
+
+        <!-- THERMODYNAMIC PARAMETERS (Auto-filled from OCR) -->
+        <div class="params-section card glass">
+          <h2>Thermodynamic Parameters</h2>
+          <p class="section-subtitle">Auto-filled from OCR extraction • <span class="reminder-text">⚠️ Please review and correct any values before submitting</span></p>
+          
+          <div class="form-two-column">
+            <div class="column">
+              <div class="form-group">
+                <label for="TEMP" class="label-title">Temperature (F) *</label>
+                <input type="number" id="TEMP" required step="0.1" min="15" max="140" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="CAPE" class="label-title">CAPE (J/kg) *</label>
+                <input type="number" id="CAPE" required step="1" min="0" max="10226" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="LAPSE_RATE_0_3" class="label-title">0-3km Lapse Rate (C/km) *</label>
+                <input type="number" id="LAPSE_RATE_0_3" required step="0.1" min="0" max="12" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="PWAT" class="label-title">PWAT (in) *</label>
+                <input type="number" id="PWAT" required step="0.01" min="0.1" max="2.5" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="SURFACE_RH" class="label-title">Surface RH (%) *</label>
+                <input type="number" id="SURFACE_RH" required step="1" min="0" max="100" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="STP" class="label-title">STP *</label>
+                <input type="number" id="STP" required step="0.1" min="0" max="64" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="STORM_SPEED" class="label-title">Storm Motion (mph) *</label>
+                <input type="number" id="STORM_SPEED" required step="1" min="0" max="200" class="form-control">
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="form-group">
+                <label for="DEWPOINT" class="label-title">Dewpoint (F) *</label>
+                <input type="number" id="DEWPOINT" required step="0.1" min="15" max="120" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="CAPE_3KM" class="label-title">3CAPE (J/kg) *</label>
+                <input type="number" id="CAPE_3KM" required step="1" min="0" max="300" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="LAPSE_3_6KM" class="label-title">3–6 km Lapse (C/km) *</label>
+                <input type="number" id="LAPSE_3_6KM" required step="0.1" min="0" max="10" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="SRH" class="label-title">SRH (m²/s²) *</label>
+                <input type="number" id="SRH" required step="1" min="0" max="1000" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="RH_MID" class="label-title">700–500 mb RH (%) *</label>
+                <input type="number" id="RH_MID" required step="1" min="0" max="100" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="VTP" class="label-title">VTP *</label>
+                <input type="number" id="VTP" required step="0.1" min="0" max="16" class="form-control">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form id="dataForm" class="data-form card glass" onsubmit="handleSubmit(event)">
+        <h2>Weather Data Entry</h2>
+
+        <div class="form-section">
+          <h3>Data Classification</h3>
+          
+          <div class="form-group">
+            <label for="tornadoType" class="label-title">Tornado Type *</label>
+            <select id="tornadoType" required class="form-control">
+              <option value="">-- Select Tornado Type --</option>
+              <option value="rope">Rope</option>
+              <option value="cone">Cone</option>
+              <option value="stovepipe">Stovepipe</option>
+              <option value="sidewinder">Sidewinder</option>
+              <option value="drillbit">Drillbit</option>
+              <option value="wedge">Wedge</option>
+              <option value="funnel">Funnel</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h3>Wind Speed Recording</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="maxWindsValue" class="label-title">Max Winds (mph) *</label>
+              <input type="number" id="maxWindsValue" min="0" max="300" step="1" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label for="windComparison" class="label-title">Comparison *</label>
+              <select id="windComparison" class="form-control">
+                <option value="">-- Select --</option>
+                <option value="greater">Greater Than (>)</option>
+                <option value="less">Less Than (<)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-large">
+            💾 Save Data Entry
+          </button>
+          <button type="button" class="btn btn-secondary btn-large" onclick="addAnotherTornado()">
+            ➕ Add Another Tornado Type
+          </button>
+        </div>
+      </form>
+
+      <div id="successMessage" class="success-card" style="display: none;">
+        <h3>✓ Data Saved Successfully</h3>
+        <p id="successDetails"></p>
+        <button class="btn btn-small" onclick="resetForm()">Add Another Entry</button>
+      </div>
+
+      <div class="data-preview card glass">
+        <h2>Submitted Data</h2>
+        <div id="dataList" class="data-list">
+          <p class="empty-message">No data entries yet. Submit a form to see entries here.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="downloadData()" id="downloadBtn" style="display: none;">
+          📥 Download as CSV
+        </button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

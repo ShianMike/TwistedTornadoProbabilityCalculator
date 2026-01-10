@@ -1,6 +1,7 @@
 // Data storage
 let collectedData = [];
 let currentImage = null;
+let isSubmitting = false; // Prevent duplicate submissions
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -366,6 +367,12 @@ function copyExtractedText() {
 function handleSubmit(event) {
   event.preventDefault();
 
+  // Prevent duplicate submissions
+  if (isSubmitting) {
+    console.log('Already submitting, preventing duplicate');
+    return;
+  }
+
   // Validate required fields
   const tornadoType = document.getElementById('tornadoType').value;
   const maxWinds = document.getElementById('maxWindsValue').value;
@@ -383,6 +390,9 @@ function handleSubmit(event) {
     showStatus('Please select a Comparison operator', 'error');
     return;
   }
+
+  // Set submitting flag
+  isSubmitting = true;
 
   // Collect all weather parameters
   const dataEntry = {
@@ -418,6 +428,9 @@ function handleSubmit(event) {
   // Save to localStorage
   saveTornadoData();
 
+  // Upload to Google Sheets
+  uploadToGoogleSheets(dataEntry);
+
   // Show success message
   showSuccessMessage(dataEntry);
 
@@ -427,6 +440,7 @@ function handleSubmit(event) {
   // Reset form
   setTimeout(() => {
     document.getElementById('dataForm').reset();
+    isSubmitting = false; // Reset flag after submission completes
   }, 2000);
 }
 
@@ -641,6 +655,116 @@ function addAnotherTornado() {
 }
 
 // Download data as CSV
+// Upload to Google Sheets
+async function uploadToGoogleSheets(entry) {
+  try {
+    // Replace with your Google Apps Script Web App URL
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxE_ij5SHYZDkLGo-B_8735XiiFaCPPfywJR5FDgKHGZkE-gnvO32upQlcD6N15sXIU/exec';
+    
+    if (APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+      console.log('Google Sheets URL not configured yet');
+      return;
+    }
+
+    const payload = {
+      timestamp: entry.timestamp,
+      tornadoType: entry.tornadoType,
+      maxWinds: entry.maxWinds,
+      windComparison: entry.windComparison,
+      TEMP: entry.TEMP,
+      DEWPOINT: entry.DEWPOINT,
+      CAPE: entry.CAPE,
+      CAPE_3KM: entry.CAPE_3KM,
+      LAPSE_RATE_0_3: entry.LAPSE_RATE_0_3,
+      LAPSE_3_6KM: entry.LAPSE_3_6KM,
+      PWAT: entry.PWAT,
+      SURFACE_RH: entry.SURFACE_RH,
+      RH_MID: entry.RH_MID,
+      SRH: entry.SRH,
+      STP: entry.STP,
+      VTP: entry.VTP,
+      STORM_SPEED: entry.STORM_SPEED
+    };
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    console.log('Data sent to Google Sheets');
+  } catch (error) {
+    console.error('Error uploading to Google Sheets:', error);
+  }
+}
+
+// Download single tornado entry as CSV (auto-triggered after submission)
+function downloadSingleEntryCSV(entry) {
+  const headers = [
+    'Timestamp',
+    'Tornado Type',
+    'Max Winds (mph)',
+    'Wind Comparison',
+    'Temperature (F)',
+    'Dewpoint (F)',
+    'CAPE (J/kg)',
+    '3CAPE (J/kg)',
+    '0-3km Lapse Rate (C/km)',
+    '3-6km Lapse (C/km)',
+    'PWAT (in)',
+    'Surface RH (%)',
+    '700-500mb RH (%)',
+    'SRH (m²/s²)',
+    'STP',
+    'VTP',
+    'Storm Motion (mph)'
+  ];
+
+  const row = [
+    entry.timestamp,
+    entry.tornadoType,
+    entry.maxWinds,
+    entry.windComparison,
+    entry.TEMP,
+    entry.DEWPOINT,
+    entry.CAPE,
+    entry.CAPE_3KM,
+    entry.LAPSE_RATE_0_3,
+    entry.LAPSE_3_6KM,
+    entry.PWAT,
+    entry.SURFACE_RH,
+    entry.RH_MID,
+    entry.SRH,
+    entry.STP,
+    entry.VTP,
+    entry.STORM_SPEED
+  ];
+
+  // Create CSV content with header and single row
+  const csvContent = [
+    headers.join(','),
+    row.join(',')
+  ].join('\n');
+
+  // Create download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `tornado-entry-${entry.tornadoType}-${timestamp}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Download all collected data as CSV (admin/user download)
 function downloadData() {
   if (collectedData.length === 0) {
     alert('No data to download');

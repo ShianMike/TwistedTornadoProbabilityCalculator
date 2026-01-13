@@ -587,15 +587,15 @@ document.addEventListener('DOMContentLoaded', () => {
     specialFactorsContainer.style.display = 'block';
     
     // Create bar graph display matching morphology distribution style
-    const html = '<div style="display: flex; flex-direction: column; gap: 12px; justify-content: space-around; height: 100%;">' +
+    const html = '<div style="display: flex; flex-direction: column; gap: 16px; padding: 8px 0;">' +
       factors.map(f => {
         const barWidth = Math.max(5, (f.chance / 100) * 100);
         return `
           <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 12px; color: #a0aec0; min-width: 110px; text-align: left;">${f.name}</span>
-            <div style="flex: 1; height: 24px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; position: relative;">
-              <div style="height: 100%; width: ${barWidth}%; background: linear-gradient(90deg, #06b6d4, #0891b2); border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">
-                <span style="color: #fff; font-size: 12px; font-weight: 700;">${f.chance}%</span>
+            <span style="font-size: 13px; color: #a0aec0; min-width: 120px; text-align: left;">${f.name}</span>
+            <div style="flex: 1; height: 28px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; position: relative;">
+              <div style="height: 100%; width: ${barWidth}%; background: linear-gradient(90deg, #06b6d4, #0891b2); border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; min-width: 50px;">
+                <span style="color: #fff; font-size: 13px; font-weight: 700;">${f.chance}%</span>
               </div>
             </div>
           </div>
@@ -852,6 +852,9 @@ document.addEventListener('DOMContentLoaded', () => {
       windDisclaimerDiv.style.display = (estimate && estimate.est_max > 0) ? 'block' : 'none';
     }
   }
+  
+  // Expose performAnalysis globally so hodograph analyzer can trigger recalculation
+  window.performAnalysis = performAnalysis;
 
   /**
    * Display the calculated risk level as a simple badge
@@ -895,26 +898,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================================
-  // EVENT LISTENERS - AUTO-ANALYSIS
+  // EVENT LISTENERS - MANUAL ANALYSIS ONLY
   // ============================================================================
   
-  // Auto-analyze when any input changes
-  ids.forEach(id => {
-    const el = get(id);
-    if (el) {
-      el.addEventListener('input', performAnalysis);
-      el.addEventListener('change', performAnalysis);
-    }
-  });
+  // Auto-analysis DISABLED - users must click "Analyze" button
+  // Input listeners only for validation, not auto-calculation
+  // ids.forEach(id => {
+  //   const el = get(id);
+  //   if (el) {
+  //     el.addEventListener('input', performAnalysis);
+  //     el.addEventListener('change', performAnalysis);
+  //   }
+  // });
 
-  // Auto-analyze for additional parameters including STP, VTP, and RISK
-  ['CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID', 'STP', 'VTP', 'RISK'].forEach(id => {
-    const el = get(id);
-    if (el) {
-      el.addEventListener('input', performAnalysis);
-      el.addEventListener('change', performAnalysis);
-    }
-  });
+  // Auto-analysis DISABLED for additional parameters
+  // ['CAPE_3KM', 'LAPSE_3_6KM', 'RH_MID', 'STP', 'VTP', 'RISK'].forEach(id => {
+  //   const el = get(id);
+  //   if (el) {
+  //     el.addEventListener('input', performAnalysis);
+  //     el.addEventListener('change', performAnalysis);
+  //   }
+  // });
 
   // ============================================================================
   // EVENT LISTENERS - BUTTONS

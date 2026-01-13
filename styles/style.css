@@ -545,9 +545,9 @@ input:focus{
 
 /* patch notes card styling */
 .patch-notes-card {
-  min-height: 380px;
-  max-height: 480px;
-  padding: 18px 20px;
+  min-height: auto;
+  max-height: none;
+  padding: 12px 16px;
   overflow: hidden;
   border-radius: 16px;
   position: relative;
@@ -716,6 +716,325 @@ input:focus{
 .patch-notes-content::-webkit-scrollbar-thumb:hover {
   background: rgba(76, 175, 80, 0.5);
 }
+
+/* ===================================================================
+   HODOGRAPH ANALYZER STYLES
+   =================================================================== */
+
+/* Hodograph card styling */
+.hodograph-card {
+  min-height: 320px;
+  max-height: 680px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(120deg, rgba(156, 39, 176, 0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(156, 39, 176, 0.15);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.hodograph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.hodograph-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.beta-badge {
+  background: rgba(255, 152, 0, 0.2);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+  border-radius: 4px;
+  color: #ffb74d;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.hodograph-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px 8px 8px;
+}
+
+/* API Key Section */
+.api-key-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(156, 39, 176, 0.2);
+}
+
+.api-key-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ce93d8;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.api-key-help {
+  color: #ba68c8;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.api-key-help:hover {
+  color: #ce93d8;
+}
+
+.api-key-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(156, 39, 176, 0.3);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.api-key-input:focus {
+  outline: none;
+  border-color: rgba(156, 39, 176, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.api-key-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Upload Section */
+.hodograph-upload-section {
+  margin-bottom: 16px;
+}
+
+.hodograph-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hodograph-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hodograph-btn.load-btn {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.25), rgba(25, 118, 210, 0.2));
+  border: 1px solid rgba(33, 150, 243, 0.4);
+  color: #64b5f6;
+}
+
+.hodograph-btn.load-btn:hover {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.35), rgba(25, 118, 210, 0.3));
+  border-color: rgba(33, 150, 243, 0.6);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+  transform: translateY(-2px);
+}
+
+.hodograph-btn.paste-btn {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.25), rgba(56, 142, 60, 0.2));
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #81c784;
+}
+
+.hodograph-btn.paste-btn:hover {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.35), rgba(56, 142, 60, 0.3));
+  border-color: rgba(76, 175, 80, 0.6);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+  transform: translateY(-2px);
+}
+
+.hodograph-btn.analyze-btn {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.25), rgba(123, 31, 162, 0.2));
+  border: 1px solid rgba(156, 39, 176, 0.4);
+  color: #ce93d8;
+  flex-basis: 100%;
+}
+
+.hodograph-btn.analyze-btn:hover {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.35), rgba(123, 31, 162, 0.3));
+  border-color: rgba(156, 39, 176, 0.6);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.2);
+  transform: translateY(-2px);
+}
+
+.hodograph-btn:active {
+  transform: translateY(0);
+}
+
+/* Preview Section */
+.hodograph-preview {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(156, 39, 176, 0.2);
+  text-align: center;
+}
+
+.hodograph-preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Status Messages */
+.status-message {
+  padding: 10px 12px;
+  margin: 12px 0;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  border: 1px solid;
+}
+
+.status-message.status-info {
+  background: rgba(33, 150, 243, 0.1);
+  border-color: rgba(33, 150, 243, 0.3);
+  color: #64b5f6;
+}
+
+.status-message.status-success {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #81c784;
+}
+
+.status-message.status-error {
+  background: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.3);
+  color: #e57373;
+}
+
+.status-message.status-loading {
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ffb74d;
+  animation: pulse 2s ease-in-out infinite alternate;
+}
+
+/* Results Section */
+.hodograph-results {
+  margin-top: 16px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(156, 39, 176, 0.2);
+}
+
+.analysis-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #ce93d8;
+  font-weight: 700;
+}
+
+.analysis-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e0e7ff;
+}
+
+.analysis-text h4 {
+  color: #ba68c8;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 6px 0;
+}
+
+.analysis-text strong {
+  color: #ce93d8;
+  font-weight: 600;
+}
+
+.analysis-text p {
+  margin: 8px 0;
+}
+
+/* Info Text */
+.hodograph-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(33, 150, 243, 0.08);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hodograph-info p {
+  margin: 6px 0;
+  color: #b9cbe0;
+}
+
+.hodograph-info p:first-child {
+  margin-top: 0;
+}
+
+.hodograph-info p strong {
+  color: #64b5f6;
+  font-weight: 600;
+}
+
+/* Custom scrollbar for hodograph content */
+.hodograph-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hodograph-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.hodograph-content::-webkit-scrollbar-thumb {
+  background: rgba(156, 39, 176, 0.3);
+  border-radius: 3px;
+}
+
+.hodograph-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 39, 176, 0.5);
+}
+
+/* ===================================================================
+   END HODOGRAPH ANALYZER STYLES
+   =================================================================== */
 
 .prob-card h3{margin:0 0 10px 0;font-size:16px}
 .chart-wrap{height:360px;min-height:240px;width:100%;overflow:hidden;position:relative;padding-right:90px;pointer-events:auto}
@@ -1049,5 +1368,282 @@ canvas{display:block;width:100% !important;height:auto !important;pointer-events
 /* Add smooth transitions to cards and interactive elements */
 .card, .btn, input, .stat-tooltip, .tornado-tooltip, .special-factors, #specialFactors, .theoretical-wind, #theoreticalWind, #riskBadge {
   transition: box-shadow 0.2s, background 0.2s, border 0.2s, color 0.2s;
+}
+
+/* =====================================================
+   NEW LAYOUT: Row-based layout matching wireframe
+   ===================================================== */
+
+/* Base row styling */
+.layout-row {
+  max-width: 1400px;
+  margin: 0 auto 16px auto;
+  width: 100%;
+}
+
+/* ROW 1: Input | Hodo (side by side) */
+.row-input-hodo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.row-input-hodo .left-col {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.row-input-hodo .hodograph-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 22px !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Match hodograph h2 to inputs h2 */
+.hodograph-card h2 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.beta-badge {
+  background: rgba(0, 200, 255, 0.2);
+  color: #00c8ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Hodograph card compact styling */
+.hodograph-card .hodograph-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hodograph-card .hodograph-info {
+  margin: 0;
+  padding: 10px;
+  background: rgba(0, 200, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.hodograph-card .hodograph-info p {
+  margin: 0 0 4px 0;
+}
+
+.hodograph-card .hodograph-info p:last-child {
+  margin: 0;
+  color: #888;
+}
+
+.hodograph-card .hodograph-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.hodograph-card .hodograph-btn {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hodograph-card .hodograph-btn:hover {
+  background: rgba(0, 200, 255, 0.1);
+  border-color: #00c8ff;
+  color: #fff;
+}
+
+/* ROW 2: Analyze Button (full width) */
+.row-analyze {
+  display: block;
+}
+
+.row-analyze .analyze-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Action buttons - matched sizing, no gradient */
+.action-btn {
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  min-width: 120px;
+}
+
+.primary-btn {
+  background: #00c8ff;
+  color: #000;
+}
+
+.primary-btn:hover {
+  background: #00a8d4;
+}
+
+.reset-btn {
+  background: transparent;
+  color: #888;
+  border: 1px solid #444;
+}
+
+.reset-btn:hover {
+  background: rgba(255,255,255,0.05);
+  color: #ccc;
+  border-color: #666;
+}
+
+/* ROW 3: Thermo (full width) */
+.row-thermo {
+  display: block;
+}
+
+.row-thermo .thermo-card {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* ROW 4: Morphology | Factors (side by side) */
+.row-morph-factors {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.row-morph-factors .prob-card,
+.row-morph-factors .factors-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 16px 20px !important;
+}
+
+.row-morph-factors .factors-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ROW 5: Patch Notes (full width) */
+.row-patch-notes {
+  display: block;
+}
+
+.row-patch-notes .patch-notes-card {
+  width: 100%;
+}
+
+/* Patch notes in footer styling */
+.patch-notes-footer {
+  max-width: 1400px;
+  margin: 0 auto 20px auto;
+}
+
+.patch-notes-footer h4 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.patch-notes-footer .patch-notes-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+.patch-notes-footer .patch-notes-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.patch-notes-footer .patch-notes-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.patch-notes-footer .patch-notes-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+}
+
+/* Responsive adjustments for new layout */
+@media (max-width: 900px) {
+  .row-input-hodo {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .row-morph-factors {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* FORCE overrides for new layout - must be at end of file */
+section.row-input-hodo,
+.row-input-hodo {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  align-items: stretch !important;
+}
+
+section.row-morph-factors,
+.row-morph-factors {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr !important;
+}
+
+.row-input-hodo > .left-col,
+.row-input-hodo > aside.left-col {
+  width: 100% !important;
+  flex: unset !important;
+  max-width: none !important;
+  min-height: 100% !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+}
+
+.row-input-hodo > .hodograph-card {
+  width: 100% !important;
+  flex: unset !important;
+  max-width: none !important;
+  min-height: 100% !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+}
+
+/* Force both cards to have same height */
+.row-input-hodo > .left-col.card,
+.row-input-hodo > .hodograph-card.card {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.row-thermo > .thermo-card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.row-morph-factors > .prob-card,
+.row-morph-factors > .factors-card {
+  width: 100% !important;
+  flex: unset !important;
+  max-width: none !important;
 }
 

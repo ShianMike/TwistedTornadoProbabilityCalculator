@@ -6,8 +6,8 @@
   <title>Twisted Wind & Tornado Predictor</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/style.css">
-  <link rel="stylesheet" href="styles/imagestyle.css">
+  <link rel="stylesheet" href="styles/style.css?v=5">
+  <link rel="stylesheet" href="styles/imagestyle.css?v=2">
   
   <!-- Load scripts with defer -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
@@ -18,12 +18,13 @@
   <script src="src/tornado-calculations.js" defer></script>
   <script src="src/chart-renderer.js" defer></script>
   <script src="src/imageprocess.js" defer></script>
+  <script src="src/hodograph-analyzer.js" defer></script>
   <script src="src/script.js" defer></script>
   <script>
     // Patch Notes functionality
     async function loadPatchNotes() {
       const loadingEl = document.getElementById('patchNotesLoading');
-      const textEl = document.getElementById('patchNotesText');
+      const textEl = document.getElementById('patchNotesText'); 
       const errorEl = document.getElementById('patchNotesError');
       
       loadingEl.style.display = 'block';
@@ -101,84 +102,80 @@
           <h1>Twisted Tornado Probability Predictor</h1>
           <p class="subtitle">Enter parameters and analyze tornado morphology probability</p>
         </div>
-        <div class="header-right">
-          <a href="data-gathering.html" class="data-gathering-link">
-            <span class="link-label">Tornado Data Gathering</span>
-            <span class="link-description">Record observations for ML Model Training</span>
-          </a>
-        </div>
       </div>
     </header>
 
-    <section class="layout-grid">
-      <div class="left-column-wrapper">
-        <aside class="left-col card glass">
-          <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
-            <h2>Inputs</h2>
-            
-            <!-- TWO COLUMN INPUT LAYOUT -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-            
-            <!-- LEFT COLUMN INPUTS -->
-            <div class="input-panel">
-              <div class="input-row">
-                <label for="TEMP" class="label-title">Temperature (F)</label>
-                <input id="TEMP" type="number" step="0.1" min="15" max="140" placeholder="" autocomplete="off">
-              </div>
-              <div class="input-row">
-                <label for="CAPE" class="label-title">CAPE (J/kg)</label>
-                <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="LAPSE_RATE_0_3" class="label-title">0-3km Lapse Rate (C/km)</label>
-                <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="PWAT" class="label-title">PWAT (in)</label>
-                <input id="PWAT" type="number" step="0.01" min="0.1" max="2.5" placeholder="" autocomplete="off">
-              </div>
-              <div class="input-row">
-                <label for="SURFACE_RH" class="label-title">Surface RH (%)</label>
-                <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="STP" class="label-title">STP</label>
-                <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="STORM_SPEED" class="label-title">Storm Motion (mph)</label>
-                <input id="STORM_SPEED" type="number" step="1" min="0" max="200" placeholder="">
-              </div>
+    <!-- ROW 1: Inputs + Hodograph side by side -->
+    <section class="layout-row row-input-hodo">
+      
+      <!-- LEFT: Inputs Card -->
+      <aside class="left-col card glass">
+        <form id="inputForm" autocomplete="off" onsubmit="return false" aria-label="Inputs form">
+          <h2>Inputs</h2>
+          
+          <!-- TWO COLUMN INPUT LAYOUT -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          
+          <!-- LEFT COLUMN INPUTS -->
+          <div class="input-panel">
+            <div class="input-row">
+              <label for="TEMP" class="label-title">Temperature (F)</label>
+              <input id="TEMP" type="number" step="0.1" min="15" max="140" placeholder="" autocomplete="off">
             </div>
+            <div class="input-row">
+              <label for="CAPE" class="label-title">CAPE (J/kg)</label>
+              <input id="CAPE" type="number" step="1" min="0" max="10226" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="LAPSE_RATE_0_3" class="label-title">0-3km Lapse Rate (C/km)</label>
+              <input id="LAPSE_RATE_0_3" type="number" step="0.1" min="0" max="12" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="PWAT" class="label-title">PWAT (in)</label>
+              <input id="PWAT" type="number" step="0.01" min="0.1" max="2.5" placeholder="" autocomplete="off">
+            </div>
+            <div class="input-row">
+              <label for="SURFACE_RH" class="label-title">Surface RH (%)</label>
+              <input id="SURFACE_RH" type="number" step="1" min="0" max="100" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="STP" class="label-title">STP</label>
+              <input id="STP" type="number" step="0.1" min="0" max="64" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="STORM_SPEED" class="label-title">Storm Motion (mph)</label>
+              <input id="STORM_SPEED" type="number" step="1" min="0" max="200" placeholder="">
+            </div>
+          </div>
 
-            <!-- RIGHT COLUMN INPUTS -->
-            <div class="input-panel">
-              <div class="input-row">
-                <label for="DEWPOINT" class="label-title">Dewpoint (F)</label>
-                <input id="DEWPOINT" type="number" step="0.1" min="15" max="120" placeholder="" autocomplete="off">
-              </div>
-              <div class="input-row">
-                <label for="CAPE_3KM" class="label-title">3CAPE (J/kg)</label>
-                <input id="CAPE_3KM" type="number" step="1" min="0" max="300" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="LAPSE_3_6KM" class="label-title">3–6 km Lapse (C/km)</label>
-                <input id="LAPSE_3_6KM" type="number" step="0.1" min="0" max="10" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="SRH" class="label-title">SRH (m²/s²)</label>
-                <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
-                <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
-              </div>
-              <div class="input-row">
-                <label for="VTP" class="label-title">VTP</label>
-                <input id="VTP" type="number" step="0.1" min="0" max="16" placeholder="">
-              </div>
+          <!-- RIGHT COLUMN INPUTS -->
+          <div class="input-panel">
+            <div class="input-row">
+              <label for="DEWPOINT" class="label-title">Dewpoint (F)</label>
+              <input id="DEWPOINT" type="number" step="0.1" min="15" max="120" placeholder="" autocomplete="off">
             </div>
+            <div class="input-row">
+              <label for="CAPE_3KM" class="label-title">3CAPE (J/kg)</label>
+              <input id="CAPE_3KM" type="number" step="1" min="0" max="300" placeholder="">
             </div>
+            <div class="input-row">
+              <label for="LAPSE_3_6KM" class="label-title">3–6 km Lapse (C/km)</label>
+              <input id="LAPSE_3_6KM" type="number" step="0.1" min="0" max="10" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="SRH" class="label-title">SRH (m²/s²)</label>
+              <input id="SRH" type="number" step="1" min="0" max="1000" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="RH_MID" class="label-title">700–500 mb RH (%)</label>
+              <input id="RH_MID" type="number" step="1" min="0" max="100" placeholder="">
+            </div>
+            <div class="input-row">
+              <label for="VTP" class="label-title">VTP</label>
+              <input id="VTP" type="number" step="0.1" min="0" max="16" placeholder="">
+            </div>
+          </div>
+          </div>
 
           <!-- Image Upload Section with improved layout -->
           <div class="upload-section">
@@ -212,9 +209,10 @@
             <div id="ocrStatus"></div>
           </div>
 
-          <div class="form-actions">
-            <button id="analyze" type="button" class="btn primary">Analyze</button>
-            <button id="reset" type="reset" class="btn ghost">Reset</button>
+          <!-- Hodograph reminder -->
+          <div class="hodo-reminder" style="background: rgba(0, 200, 255, 0.1); border: 1px solid rgba(0, 200, 255, 0.3); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px;">
+            <span style="color: #00c8ff;"><strong>Hodograph?</strong></span>
+            <span style="color: #aaa;"> Paste hodograph in the analyzer for 50% more accurate morphology prediction!</span>
           </div>
           
           <!-- Validation warnings -->
@@ -222,125 +220,205 @@
         </form>
       </aside>
 
-        <div class="patch-notes-card card glass" role="region" aria-label="Patch Notes">
-          <div class="patch-notes-header">
-            <h3>PATCH NOTES</h3>
-            <button id="refreshPatchNotes" class="refresh-btn" title="Refresh patch notes">⟳</button>
+      <!-- RIGHT: Hodograph Analyzer Card -->
+      <div class="hodograph-card card glass" role="region" aria-label="Hodograph Analyzer" data-section="hodograph">
+        <h2>Hodograph Analyzer <span class="beta-badge">BETA</span></h2>
+        
+        <!-- API Key input row -->
+        <div class="input-panel" style="margin-bottom: 12px;">
+          <div class="input-row">
+            <label for="openaiApiKey" class="label-title">API Key (local testing)</label>
+            <input type="password" id="openaiApiKey" placeholder="AIza..." autocomplete="off">
           </div>
-          <div class="patch-notes-content">
-            <div id="patchNotesLoading" class="loading-indicator">Loading patch notes...</div>
-            <div id="patchNotesText" class="patch-notes-text" style="display: none;"></div>
-            <div id="patchNotesError" class="error-message" style="display: none;">Failed to load patch notes. Check connection and try again.</div>
+        </div>
+
+        <!-- Upload Section - matches input card style -->
+        <div class="upload-section" style="margin: 0;">
+          <input type="file" id="hodographInput" accept="image/*" style="display: none;">
+          
+          <div class="upload-buttons">
+            <button type="button" class="load-btn" onclick="document.getElementById('hodographInput').click()">
+              Load Image
+            </button>
+            <button type="button" class="paste-btn" id="pasteHodograph">
+              Paste Image
+            </button>
+          </div>
+          
+          <!-- Image Layout Tip for Hodograph -->
+          <div class="image-tip" style="background: rgba(0, 200, 255, 0.08); border-left-color: #00c8ff;">
+            <div class="tip-header" style="color: #00c8ff;">Hodograph Snip Tip</div>
+            <div class="tip-content">
+              <p><strong>For best results, snip the hodograph like this:</strong></p>
+              <div class="tip-image-container">
+                <img src="assets/Hodograph-example.png" 
+                     alt="Hodograph snip example" 
+                     class="tip-example-image">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Image Preview -->
+          <div id="hodographPreview" style="display: none; margin: 14px 0;"></div>
+          
+          <!-- Analyze Button -->
+          <button type="button" id="analyzeHodograph" class="load-btn" style="width: 100%; margin: 10px 0; background: linear-gradient(135deg, rgba(0, 200, 255, 0.15), rgba(0, 180, 230, 0.15)); border: 1px solid rgba(0, 200, 255, 0.3); color: #00c8ff; display: none;">
+            Analyze Hodograph
+          </button>
+          
+          <!-- Status Message -->
+          <div id="hodographStatus" class="status-message" style="display: none;"></div>
+          
+          <!-- Analysis Results -->
+          <div id="hodographResults" class="hodograph-results" style="display: none;"></div>
+        </div>
+
+        <!-- Info Tip - matches image-tip style -->
+        <div class="image-tip" style="background: rgba(0, 200, 255, 0.08); border-left-color: #00c8ff;">
+          <div class="tip-header" style="color: #00c8ff;">What is a hodograph?</div>
+          <div class="tip-content">
+            <p style="margin: 0; color: #888; font-size: 12px;">A hodograph shows wind speed/direction changes with height. Load or paste an image, then click Analyze.</p>
           </div>
         </div>
       </div>
+    </section>
 
-      <section class="right-col" aria-live="polite">
-        <div class="thermo-card card glass" role="region" aria-label="Thermodynamics summary">
-          <div class="thermo-header">
-            <h2>Thermodynamics</h2>
-            <div class="vip">VIP</div>
-          </div>
+    <!-- ROW 2: Analyze Button (full width) -->
+    <section class="layout-row row-analyze">
+      <div class="analyze-row">
+        <button id="analyze" type="button" class="action-btn primary-btn">Analyze</button>
+        <button id="reset" type="button" class="action-btn reset-btn">Reset</button>
+      </div>
+    </section>
 
-          <div class="thermo-grid">
-            <div class="stat-panel">
-              <div class="stat-row">
-              <span class="k" data- desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
+    <!-- ROW 3: Thermodynamics (full width) -->
+    <section class="layout-row row-thermo">
+      <div class="thermo-card card glass" role="region" aria-label="Thermodynamics summary">
+        <div class="thermo-header">
+          <h2>Thermodynamics</h2>
+          <div class="vip">VIP</div>
+        </div>
+
+        <div class="thermo-grid">
+          <div class="stat-panel">
+            <div class="stat-row">
+              <span class="k" data-desc="Temperature shows the temperature of the atmosphere at the surface. Higher temperatures provide warm air to feed developing mesocyclones in supercells.">TEMPERATURE</span>
               <span class="v" id="sum_TEMP">—</span><span class="unit">F</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="CAPE (Convective Available Potential Energy) is the measure of potential energy for thunderstorms to develop. Higher CAPE indicates stronger instability and higher potential for strong storms and tornadoes.">CAPE</span>
               <span class="v" id="sum_CAPE">—</span><span class="unit">J/KG</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="0-3KM Lapse Rate: Temperature change per kilometer from the surface to 3 km. A steeper (larger) lapse rate indicates stronger low-level instability and contributes to tornado intensity and storm growth. Values up to ~10 C/km are possible on high-risk days.">0-3KM LAPSE</span>
               <span class="v" id="sum_LAPSE">—</span><span class="unit">C/KM</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="PWAT (Precipitable Water) is the total water vapor in a column of air. Higher PWAT increases potential for heavy rainfall, reduced visibility, larger hail, and rain-wrapped tornadoes. PWAT < 0.9 in usually lowers rainwrap chance; PWAT > 0.9 in increases it.">PWAT</span>
               <span class="v" id="sum_PWAT">—</span><span class="unit">IN</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="Surface Relative Humidity (RH) shows the moisture content near the ground. Higher surface RH supports storm development and intensification by keeping the boundary layer moist.">SURFACE RH</span>
               <span class="v" id="sum_RH">—</span><span class="unit">%</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="Significant Tornado Parameter combines instability (CAPE), shear (SRH), and moisture (PWAT). Higher STP indicates greater potential for significant tornadoes. Game range: 0-64. MRGL: 0-2, SLGT: 3-4, ENH: 5-6, MDT: 7-10, HIGH: 11+">STP</span>
               <span class="v" id="sum_STP">—</span><span class="unit"></span>
-              </div>
             </div>
+          </div>
 
-            <div class="stat-panel">
-              <div class="stat-row">
+          <div class="stat-panel">
+            <div class="stat-row">
               <span class="k" data-desc="Dew Point indicates the temperature at which air becomes saturated and water condenses. Higher dew points are crucial for storm development because they indicate available low-level moisture.">DEWPOINT</span>
               <span class="v" id="sum_DEW">—</span><span class="unit">F</span>
-              </div>
-              <div class="stat-row">
-              <span class="k" data-desc="3CAPEshows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
+            </div>
+            <div class="stat-row">
+              <span class="k" data-desc="3CAPE shows CAPE for the lowest 3 km; it helps represent surface-based instability most relevant to tornadic development. It's a quick proxy for low-level buoyancy.">3CAPE</span>
               <span class="v" id="sum_3CAPE">—</span><span class="unit">J/KG</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="3-6KM Lapse Rate: Temperature change per kilometer from 3 km to 6 km. Typically lower than 0–3 km lapse, but when large it contributes to hail and lightning intensity and supports storm growth.">3-6KM LAPSE</span>
               <span class="v" id="sum_36LAPSE">—</span><span class="unit">C/KM</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="SRH (Storm-Relative Helicity) measures how much the air within a storm is spinning relative to storm motion. High SRH is a major contributor to strong tornado potential because it reflects stronger low-level rotation.">SRH</span>
               <span class="v" id="sum_SRH">—</span><span class="unit">M²/S²</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="700–500 mb RH shows mid-level moisture. High mid-level RH supports storm maintenance and reduces entrainment; dry mid-levels can inhibit storm strength.">700-500MB RH</span>
               <span class="v" id="sum_700RH">—</span><span class="unit">%</span>
-              </div>
-              <div class="stat-row">
+            </div>
+            <div class="stat-row">
               <span class="k" data-desc="Violent Tornado Parameter emphasizes extreme instability and low-level rotation. Higher VTP suggests potential for violent (EF4-EF5) tornadoes. Game range: 0-16. MRGL: 0-1, SLGT: 1, ENH: 1-2, MDT: 2, HIGH: 3+">VTP</span>
               <span class="v" id="sum_VTP">—</span><span class="unit"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- ADD THE WIND ESTIMATE SECTION BACK HERE -->
-          <div id="windEstimate" class="wind-estimate-section">
-            <div class="thermo-footer">
-              <div class="wind-left">
-                <div class="wind-label" id="windLabel">No estimate yet</div>
-                <div class="ef-label">EF Scale Estimate</div>
-              </div>
-              <div class="miniwrap">
-                <canvas id="miniWind" width="600" height="20" aria-hidden="true"></canvas>
-              </div>
-            </div>
-
-            <!-- Theoretical wind estimate and wind guide in same row -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
-              <!-- Theoretical wind estimate -->
-              <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
-
-              <!-- Wind estimate disclaimer -->
-              <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
-                <strong>Wind Speed Guide:</strong> 
-                The estimated wind speeds represent the <strong>maximum strength (peak winds)</strong> the tornado reaches at its most intense point, not average winds. Tornadoes fluctuate in intensity over their lifespan. These estimates are based on atmospheric parameters using a machine learning model.
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- Probability distribution and special factors in same row -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
-          <div class="prob-card card glass" role="region" aria-label="Probability distribution">
-            <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
-            <div class="chart-wrap">
-              <canvas id="probChart"></canvas>
-              <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+        <!-- Wind Estimate Section -->
+        <div id="windEstimate" class="wind-estimate-section">
+          <div class="thermo-footer">
+            <div class="wind-left">
+              <div class="wind-label" id="windLabel">No estimate yet</div>
+              <div class="ef-label">EF Scale Estimate</div>
+            </div>
+            <div class="miniwrap">
+              <canvas id="miniWind" width="600" height="20" aria-hidden="true"></canvas>
             </div>
           </div>
 
-          <!-- Special factors as graph-like card -->
-          <div class="prob-card card glass" role="region" aria-label="Special tornado factors">
-            <h3>SPECIAL FACTORS</h3>
-            <div id="specialFactors" class="special-factors"></div>
+          <!-- Theoretical wind estimate and wind guide in same row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <!-- Theoretical wind estimate -->
+            <div id="theoreticalWind" class="theoretical-wind" style="display:none;"></div>
+
+            <!-- Wind estimate disclaimer -->
+            <div id="windDisclaimer" class="wind-disclaimer" style="display:none;">
+              <strong>Wind Speed Guide:</strong> 
+              The estimated wind speeds represent the <strong>maximum strength (peak winds)</strong> the tornado reaches at its most intense point, not average winds. Tornadoes fluctuate in intensity over their lifespan. These estimates are based on atmospheric parameters using a machine learning model.
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+
+    <!-- ROW 4: Morphology + Factors side by side -->
+    <section class="layout-row row-morph-factors">
+      <!-- Probability Distribution Card -->
+      <div class="prob-card card glass" role="region" aria-label="Probability distribution">
+        <h3>TORNADO MORPHOLOGY PROBABILITY DISTRIBUTION</h3>
+        <div class="chart-wrap">
+          <canvas id="probChart"></canvas>
+          <div class="percent-col" id="percentCol" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- Special Factors Card -->
+      <div class="factors-card card glass" role="region" aria-label="Special tornado factors">
+        <h3>SPECIAL FACTORS</h3>
+        <div id="specialFactors" class="special-factors"></div>
+      </div>
+    </section>
+
+    <!-- ROW 5: Patch Notes (full width) -->
+    <section class="layout-row row-patch-notes">
+      <div class="patch-notes-card card glass" style="padding: 12px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="margin: 0; color: #00c8ff; font-size: 13px;">PATCH NOTES</h4>
+          <button id="refreshPatchNotes" class="refresh-btn" title="Refresh" style="background: none; border: 1px solid #444; color: #888; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">⟳</button>
+        </div>
+        <div id="patchNotesLoading" class="loading-indicator" style="font-size: 12px; color: #888;">Loading...</div>
+        <div id="patchNotesText" style="display: none; font-size: 12px; color: #aaa; line-height: 1.4; max-height: 240px; overflow-y: auto;"></div>
+        <div id="patchNotesError" style="display: none; font-size: 12px; color: #f44;">Failed to load.</div>
+      </div>
+    </section>
+
+    <!-- Data Gathering Link -->
+    <section class="layout-row row-data-gathering" style="margin-top: 16px;">
+      <a href="data-gathering.html" class="data-gathering-link" style="width: 100%; text-align: center;">
+        <span class="link-label">Tornado Data Gathering</span>
+        <span class="link-description">Record observations for ML Model Training</span>
+      </a>
     </section>
   </main>
 
@@ -349,7 +427,7 @@
 
   <footer class="app-footer">
     <p class="disclaimer-text">
-      <strong>Disclaimer:</strong> This is a game/simulation tool for Twisted from Roblox. Tornado morphology predictions and wind speed estimates are generated by a trained machine learning model based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. This tool does not yet analyze hodographs, boundary layer details, or other storm-scale dynamics that affect actual tornado formation. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction.
+      <strong>Disclaimer:</strong> This is a game/simulation tool for Twisted from Roblox. Tornado morphology predictions and wind speed estimates are generated by a trained machine learning model based on simplified formulas inspired by real meteorological indices (CAPE, SRH, STP, VTP) but are <strong>not always accurate for in-game tornado types</strong>. The hodograph analyzer uses AI to assist with wind profile analysis. Results in-game may show strong or violent tornadoes for entertainment purposes. This tool is not for real weather prediction.
     </p>
     <p style="font-size: 11px; opacity: 0.5; margin-top: 12px;">
       <strong>Privacy:</strong> This application runs entirely in your browser. No data is sent to any server. Images uploaded or pasted for OCR processing are handled locally and not stored or transmitted.

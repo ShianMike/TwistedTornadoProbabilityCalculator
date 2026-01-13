@@ -95,6 +95,9 @@
   color: #4dd0e1;
 }
 
+/* Hodograph card buttons - match inputs card colors (green load, blue paste) */
+/* No overrides needed - inherits from .load-btn and .paste-btn above */
+
 /* Loading state */
 .loading {
   display: inline-block;

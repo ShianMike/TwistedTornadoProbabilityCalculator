@@ -1,19 +1,18 @@
 /**
- * Hodograph Analysis API Endpoint
- * This serverless function keeps your OpenAI API key secret on the server
- * Users never see your API key - they just call this endpoint
+ * Hodograph Analysis API Endpoint v2.0
  * 
- * RATE LIMITING: Prevents abuse (max 10 requests per IP per hour)
+ * Supports TWO modes:
+ * 1. extractGeometry: true  -> Returns structured JSON for metric calculation
+ * 2. extractGeometry: false -> Returns human-readable analysis text
+ * 
+ * RATE LIMITING: Max 10 requests per IP per hour
  */
 
-// Simple in-memory rate limiting (resets on cold start)
-// For production, consider using Vercel KV or Upstash Redis
 const rateLimitMap = new Map();
-const RATE_LIMIT = 10; // Max requests per window
-const RATE_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+const RATE_LIMIT = 10;
+const RATE_WINDOW = 60 * 60 * 1000;
 
 function getRateLimitKey(req) {
-  // Get IP address from various headers (Vercel, Cloudflare, etc.)
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
          req.headers['x-real-ip'] ||
          req.socket?.remoteAddress ||
@@ -29,76 +28,68 @@ function checkRateLimit(ip) {
     return { allowed: true, remaining: RATE_LIMIT - 1 };
   }
   
-  // Reset if window expired
   if (now > record.resetTime) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
     return { allowed: true, remaining: RATE_LIMIT - 1 };
   }
   
-  // Check if over limit
   if (record.count >= RATE_LIMIT) {
     const retryAfter = Math.ceil((record.resetTime - now) / 1000);
     return { allowed: false, remaining: 0, retryAfter };
   }
   
-  // Increment counter
   record.count++;
   return { allowed: true, remaining: RATE_LIMIT - record.count };
 }
 
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Geometry extraction prompt for deterministic metric calculation
+const GEOMETRY_PROMPT = `You are analyzing a hodograph image from a weather simulation game.
 
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+TASK: Extract the geometric data from this hodograph plot as structured JSON.
 
-  // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+A hodograph shows wind vectors at different heights plotted as points connected by a line. The origin (0,0) represents no wind, and distance from origin represents wind speed.
 
-  // Check rate limit
-  const ip = getRateLimitKey(req);
-  const rateLimit = checkRateLimit(ip);
-  
-  res.setHeader('X-RateLimit-Limit', RATE_LIMIT);
-  res.setHeader('X-RateLimit-Remaining', rateLimit.remaining);
-  
-  if (!rateLimit.allowed) {
-    res.setHeader('Retry-After', rateLimit.retryAfter);
-    return res.status(429).json({ 
-      error: `Rate limit exceeded. Please try again in ${Math.ceil(rateLimit.retryAfter / 60)} minutes.`,
-      retryAfter: rateLimit.retryAfter
-    });
-  }
+Please extract:
 
-  try {
-    const { image } = req.body;
+1. **plotBbox**: The bounding box of the plot area in normalized coordinates [0-1]
+   - xMin, yMin, xMax, yMax relative to image dimensions
 
-    if (!image) {
-      return res.status(400).json({ error: 'No image provided' });
-    }
+2. **origin**: The position of the origin point (0,0) in normalized coordinates
+   - x, y values between 0 and 1
 
-    // Validate image size (rough check - base64 is ~1.37x larger than binary)
-    const imageSizeKB = (image.length * 0.75) / 1024;
-    if (imageSizeKB > 5000) { // 5MB limit
-      return res.status(400).json({ error: 'Image too large. Maximum size is 5MB.' });
-    }
+3. **polylinePoints**: The main colored trace as ordered points (from surface upward)
+   - Array of {x, y} objects in normalized coordinates
+   - Include ALL visible points along the curve
+   - Maximum 80 points, downsample if needed
+   - Order from lowest altitude (surface) to highest
 
-    // Your API key is stored as an environment variable in Vercel
-    // Users NEVER see this key!
-    const apiKey = process.env.OPENAI_API_KEY;
+4. **stormMotion** (if visible): Storm motion marker/arrow
+   - x, y: position in normalized coordinates
+   - direction: degrees (meteorological, 0=N, 90=E)
+   - speed: if text is visible, the speed value
 
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
+5. **plotRadius**: Estimated radius of the outermost ring in the same units as the scale
 
-    const prompt = `You are a meteorology expert analyzing a hodograph image. A hodograph shows how wind speed and direction change with height in the atmosphere.
+6. **confidence**: Your confidence in the extraction (0.0 to 1.0)
+
+7. **warnings**: Array of any issues encountered (e.g., "partial occlusion", "unclear origin", "ambiguous scale")
+
+RESPOND WITH ONLY VALID JSON in this exact format:
+{
+  "plotBbox": {"xMin": 0.1, "yMin": 0.1, "xMax": 0.9, "yMax": 0.9},
+  "origin": {"x": 0.5, "y": 0.5},
+  "polylinePoints": [{"x": 0.5, "y": 0.5}, {"x": 0.52, "y": 0.48}],
+  "stormMotion": {"x": 0.6, "y": 0.4, "direction": 250, "speed": 35},
+  "plotRadius": 80,
+  "confidence": 0.85,
+  "warnings": []
+}
+
+If you cannot detect certain elements, use null for those fields.
+Do NOT include any explanation text, ONLY the JSON object.`;
+
+// Standard analysis prompt for human-readable output
+const ANALYSIS_PROMPT = `You are a meteorology expert analyzing a hodograph image. A hodograph shows how wind speed and direction change with height in the atmosphere.
 
 Please analyze this hodograph and provide the following information:
 
@@ -128,45 +119,114 @@ Please analyze this hodograph and provide the following information:
 
 Please provide numerical estimates where possible and format your response clearly with sections.`;
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+module.exports = async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Check rate limit
+  const ip = getRateLimitKey(req);
+  const rateLimit = checkRateLimit(ip);
+  
+  res.setHeader('X-RateLimit-Limit', RATE_LIMIT);
+  res.setHeader('X-RateLimit-Remaining', rateLimit.remaining);
+  
+  if (!rateLimit.allowed) {
+    res.setHeader('Retry-After', rateLimit.retryAfter);
+    return res.status(429).json({ 
+      error: `Rate limit exceeded. Please try again in ${Math.ceil(rateLimit.retryAfter / 60)} minutes.`,
+      retryAfter: rateLimit.retryAfter
+    });
+  }
+
+  try {
+    const { image, extractGeometry } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    // Validate image size (5MB limit)
+    const imageSizeKB = (image.length * 0.75) / 1024;
+    if (imageSizeKB > 5000) {
+      return res.status(400).json({ error: 'Image too large. Maximum size is 5MB.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // Choose prompt based on mode
+    const prompt = extractGeometry ? GEOMETRY_PROMPT : ANALYSIS_PROMPT;
+
+    // Extract base64 data from data URL
+    const base64Data = image.split(',')[1];
+    const mimeType = image.split(';')[0].split(':')[1] || 'image/png';
+
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: image, detail: 'high' } }
-            ]
-          }
-        ],
-        max_tokens: 1500,
-        temperature: 0.7
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Data
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          maxOutputTokens: extractGeometry ? 4000 : 1500,
+          temperature: extractGeometry ? 0.1 : 0.7
+        }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       return res.status(response.status).json({ 
-        error: errorData.error?.message || 'OpenAI API error' 
+        error: errorData.error?.message || 'Gemini API error' 
       });
     }
 
     const data = await response.json();
-    const analysis = data.choices[0].message.content;
+    const analysisText = data.candidates[0].content.parts[0].text;
+
+    // If geometry mode, try to parse JSON
+    if (extractGeometry) {
+      try {
+        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const geometry = JSON.parse(jsonMatch[0]);
+          return res.status(200).json({
+            geometry,
+            analysis: analysisText,
+            rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+          });
+        }
+      } catch (parseErr) {
+        console.error('JSON parse error:', parseErr);
+        // Fall through to return raw text
+      }
+    }
 
     return res.status(200).json({ 
-      analysis,
-      rateLimit: {
-        remaining: rateLimit.remaining,
-        limit: RATE_LIMIT
-      }
+      analysis: analysisText,
+      rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
     });
 
   } catch (error) {

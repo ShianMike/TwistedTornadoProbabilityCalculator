@@ -34,7 +34,7 @@ Predicts probability distribution across six tornado morphology types:
 ## Usage
 
 ### Quick Start
-1. Open `index.html` in a modern browser
+1. Open `index.html` in a modern browser or use this link https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
 2. Enter atmospheric parameters OR paste a screenshot from Twisted
 3. (Optional) Paste a hodograph image for enhanced prediction
 4. Click **Analyze** to see results

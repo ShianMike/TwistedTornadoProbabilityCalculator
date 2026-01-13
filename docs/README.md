@@ -97,6 +97,45 @@ Created by **seanmike**
 
 This is a game/simulation tool for Twisted from Roblox. Predictions are based on simplified formulas inspired by real meteorological indices but are **not accurate for real weather prediction**. The hodograph analyzer uses AI which may produce varying results.
 
+## Version History
+
+### v2.0.0 - Hodograph Integration
+- Added AI-powered hodograph analyzer using Gemini 2.5 Flash
+- 50/50 blend scoring with thermodynamic and hodograph metrics
+- Auto-analyze on image load/paste
+- Rate limiting (10 requests/minute)
+- New 5-row UI layout
+
+### v1.5.0 - Enhanced Analysis
+- Added morphology confidence scoring
+- Special factors detection improvements
+- Updated disclaimer with model limitations
+
+### v1.4.0 - OCR Improvements
+- Better image text extraction
+- Support for pasting screenshots directly
+- Improved number parsing
+
+### v1.3.0 - Model Updates
+- SVM model with 98.52% accuracy
+- Random Forest comparison results
+- Enhanced wind speed predictions
+
+### v1.2.0 - UI Refresh
+- New card-based layout
+- Chart.js visualizations
+- Responsive design
+
+### v1.1.0 - Core Features
+- Tornado type classification
+- EF-Scale predictions
+- Special factors analysis
+
+### v1.0.0 - Initial Release
+- Basic probability calculator
+- Input validation
+- Simple predictions
+
 ## License
 
 MIT License

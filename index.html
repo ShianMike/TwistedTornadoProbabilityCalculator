@@ -224,8 +224,8 @@
       <div class="hodograph-card card glass" role="region" aria-label="Hodograph Analyzer" data-section="hodograph">
         <h2>Hodograph Analyzer <span class="beta-badge">BETA</span></h2>
         
-        <!-- API Key input row -->
-        <div class="input-panel" style="margin-bottom: 12px;">
+        <!-- API Key input row - hidden in production, shown by JS if useServer=false -->
+        <div id="apiKeySection" class="input-panel" style="margin-bottom: 12px; display: none;">
           <div class="input-row">
             <label for="openaiApiKey" class="label-title">API Key (local testing)</label>
             <input type="password" id="openaiApiKey" placeholder="AIza..." autocomplete="off">

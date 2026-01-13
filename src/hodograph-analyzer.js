@@ -414,7 +414,13 @@ IMPORTANT:
   function initializeHodographAnalyzer() {
     const fileInput = document.getElementById('hodographInput');
     const apiKeyInput = document.getElementById('openaiApiKey');
+    const apiKeySection = document.getElementById('apiKeySection');
     const pasteButton = document.getElementById('pasteHodograph');
+
+    // Show API key section only in local testing mode
+    if (!CONFIG.useServer && apiKeySection) {
+      apiKeySection.style.display = 'block';
+    }
 
     const savedApiKey = localStorage.getItem('gemini_api_key');
     if (savedApiKey && apiKeyInput) {

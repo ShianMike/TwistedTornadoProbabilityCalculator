@@ -726,7 +726,8 @@ input:focus{
   min-height: 320px;
   max-height: 680px;
   padding: 18px 20px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 16px;
   position: relative;
   margin-top: 16px;

@@ -505,11 +505,12 @@ IMPORTANT:
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           e.preventDefault();
+          e.stopPropagation();
           loadHodographImage(items[i].getAsFile());
-          break;
+          return; // Exit completely after handling
         }
       }
-    });
+    }, true);
 
     console.log('Hodograph analyzer v2.0 initialized (with tornado integration)');
   }

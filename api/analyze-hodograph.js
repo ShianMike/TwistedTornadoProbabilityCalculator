@@ -232,7 +232,7 @@ module.exports = async function handler(req, res) {
             },
           ],
           generationConfig: {
-            maxOutputTokens: extractGeometry ? 4000 : 1500,
+            maxOutputTokens: extractGeometry ? 8000 : 2000,
             temperature: extractGeometry ? 0.1 : 0.7,
           },
         }),
@@ -264,8 +264,14 @@ module.exports = async function handler(req, res) {
     // If geometry mode, try to parse JSON
     if (extractGeometry) {
       try {
+        // Strip markdown code blocks if present
+        let cleanedText = analysisText
+          .replace(/```json\s*/gi, '')
+          .replace(/```\s*/g, '')
+          .trim();
+        
         // Extract the first JSON object from the response (robust to extra text)
-        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const geometry = JSON.parse(jsonMatch[0]);
           return res.status(200).json({

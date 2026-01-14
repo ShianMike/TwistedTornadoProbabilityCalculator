@@ -24,7 +24,7 @@
     // Use full Vercel URL for GitHub Pages, relative path for Vercel itself
     serverEndpoint: window.location.hostname.includes('vercel.app') 
       ? '/api/analyze-hodograph' 
-      : 'https://twistedtornado.vercel.app/api/analyze-hodograph',
+      : 'https://twisted-tornado-probability-calculator.vercel.app/api/analyze-hodograph',
     apiKey: '',
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     model: 'gemini-2.5-flash',

@@ -204,7 +204,14 @@ module.exports = async function handler(req, res) {
     }
 
     const data = await response.json();
-    const analysisText = data.candidates[0].content.parts[0].text;
+    console.log('Gemini response received, candidates:', data.candidates?.length);
+    
+    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!analysisText) {
+      console.error('No analysis text in response:', JSON.stringify(data, null, 2));
+      return res.status(500).json({ error: 'No analysis text in API response' });
+    }
 
     // If geometry mode, try to parse JSON
     if (extractGeometry) {
@@ -212,15 +219,27 @@ module.exports = async function handler(req, res) {
         const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const geometry = JSON.parse(jsonMatch[0]);
+          console.log('Parsed geometry with', geometry.polylinePoints?.length || 0, 'points');
           return res.status(200).json({
             geometry,
             analysis: analysisText,
             rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
           });
+        } else {
+          console.error('No JSON found in response:', analysisText.substring(0, 500));
+          return res.status(200).json({ 
+            geometry: { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: ['Failed to parse geometry from AI response'] },
+            analysis: analysisText,
+            rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+          });
         }
       } catch (parseErr) {
-        console.error('JSON parse error:', parseErr);
-        // Fall through to return raw text
+        console.error('JSON parse error:', parseErr.message, 'Response:', analysisText.substring(0, 500));
+        return res.status(200).json({ 
+          geometry: { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: ['JSON parse error: ' + parseErr.message] },
+          analysis: analysisText,
+          rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+        });
       }
     }
 

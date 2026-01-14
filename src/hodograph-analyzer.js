@@ -316,11 +316,14 @@ IMPORTANT:
 
       if (CONFIG.useServer) {
         RATE_LIMIT.recordRequest();
+        console.log('[Hodograph] Calling server endpoint...');
         const response = await fetch(CONFIG.serverEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64Image, extractGeometry: true })
         });
+
+        console.log('[Hodograph] Server response status:', response.status);
 
         if (response.status === 429) {
           const errorData = await response.json();
@@ -329,11 +332,17 @@ IMPORTANT:
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('[Hodograph] Server error:', errorData);
           throw new Error(errorData.error || `Server error: ${response.status}`);
         }
 
         responseData = await response.json();
-        if (responseData.geometry) return responseData.geometry;
+        console.log('[Hodograph] Server response:', responseData);
+        
+        if (responseData.geometry) {
+          console.log('[Hodograph] Geometry received with', responseData.geometry.polylinePoints?.length || 0, 'points');
+          return responseData.geometry;
+        }
         return parseGeometryFromText(responseData.analysis);
 
       } else {

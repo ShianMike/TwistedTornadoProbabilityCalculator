@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/analyze-hodograph.js": {
-      "runtime": "@vercel/node@3"
+      "runtime": "nodejs18.x"
     }
   }
 }

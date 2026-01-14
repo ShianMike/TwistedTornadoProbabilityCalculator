@@ -1,10 +1,10 @@
 /**
- * Hodograph Analysis API Endpoint v2.0
- * 
+ * Hodograph Analysis API Endpoint v2.0 (Vercel Serverless Function)
+ *
  * Supports TWO modes:
- * 1. extractGeometry: true  -> Returns structured JSON for metric calculation
- * 2. extractGeometry: false -> Returns human-readable analysis text
- * 
+ * 1) extractGeometry: true  -> Returns structured JSON for metric calculation
+ * 2) extractGeometry: false -> Returns human-readable analysis text
+ *
  * RATE LIMITING: Max 10 requests per IP per hour
  */
 
@@ -13,33 +13,55 @@ const RATE_LIMIT = 10;
 const RATE_WINDOW = 60 * 60 * 1000;
 
 function getRateLimitKey(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-         req.headers['x-real-ip'] ||
-         req.socket?.remoteAddress ||
-         'unknown';
+  return (
+    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+    req.headers["x-real-ip"] ||
+    req.socket?.remoteAddress ||
+    "unknown"
+  );
 }
 
 function checkRateLimit(ip) {
   const now = Date.now();
   const record = rateLimitMap.get(ip);
-  
+
   if (!record) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
     return { allowed: true, remaining: RATE_LIMIT - 1 };
   }
-  
+
   if (now > record.resetTime) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
     return { allowed: true, remaining: RATE_LIMIT - 1 };
   }
-  
+
   if (record.count >= RATE_LIMIT) {
     const retryAfter = Math.ceil((record.resetTime - now) / 1000);
     return { allowed: false, remaining: 0, retryAfter };
   }
-  
+
   record.count++;
   return { allowed: true, remaining: RATE_LIMIT - record.count };
+}
+
+/**
+ * Vercel Serverless Functions often do NOT auto-parse JSON body for raw /api/*.js.
+ * This helper reads and parses JSON safely.
+ */
+async function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => {
+      if (!data) return resolve({});
+      try {
+        resolve(JSON.parse(data));
+      } catch (e) {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+    req.on("error", reject);
+  });
 }
 
 // Geometry extraction prompt for deterministic metric calculation
@@ -121,135 +143,174 @@ Please provide numerical estimates where possible and format your response clear
 
 module.exports = async function handler(req, res) {
   // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   // Check rate limit
   const ip = getRateLimitKey(req);
   const rateLimit = checkRateLimit(ip);
-  
-  res.setHeader('X-RateLimit-Limit', RATE_LIMIT);
-  res.setHeader('X-RateLimit-Remaining', rateLimit.remaining);
-  
+
+  res.setHeader("X-RateLimit-Limit", String(RATE_LIMIT));
+  res.setHeader("X-RateLimit-Remaining", String(rateLimit.remaining));
+
   if (!rateLimit.allowed) {
-    res.setHeader('Retry-After', rateLimit.retryAfter);
-    return res.status(429).json({ 
-      error: `Rate limit exceeded. Please try again in ${Math.ceil(rateLimit.retryAfter / 60)} minutes.`,
-      retryAfter: rateLimit.retryAfter
+    res.setHeader("Retry-After", String(rateLimit.retryAfter));
+    return res.status(429).json({
+      error: `Rate limit exceeded. Please try again in ${Math.ceil(
+        rateLimit.retryAfter / 60
+      )} minutes.`,
+      retryAfter: rateLimit.retryAfter,
     });
   }
 
   try {
-    const { image, extractGeometry } = req.body;
-
-    if (!image) {
-      return res.status(400).json({ error: 'No image provided' });
+    // Parse JSON body
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
     }
 
-    // Validate image size (5MB limit)
+    const { image, extractGeometry } = body;
+
+    if (!image) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    // Validate image size (5MB limit) - image is expected to be a data URL
+    // Approx base64 overhead: 4 chars -> 3 bytes, so bytes ~ len * 0.75
     const imageSizeKB = (image.length * 0.75) / 1024;
     if (imageSizeKB > 5000) {
-      return res.status(400).json({ error: 'Image too large. Maximum size is 5MB.' });
+      return res
+        .status(400)
+        .json({ error: "Image too large. Maximum size is 5MB." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Server configuration error' });
+      return res.status(500).json({ error: "Server configuration error" });
     }
 
     // Choose prompt based on mode
     const prompt = extractGeometry ? GEOMETRY_PROMPT : ANALYSIS_PROMPT;
 
     // Extract base64 data from data URL
-    const base64Data = image.split(',')[1];
-    const mimeType = image.split(';')[0].split(':')[1] || 'image/png';
+    const base64Data = String(image).includes(",") ? image.split(",")[1] : image;
+    const mimeType = String(image).includes(";")
+      ? image.split(";")[0].split(":")[1] || "image/png"
+      : "image/png";
 
-    // Call Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
+    // Call Gemini API (Node 18+ fetch is available; use @vercel/node@3 runtime)
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
             {
-              inline_data: {
-                mime_type: mimeType,
-                data: base64Data
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          maxOutputTokens: extractGeometry ? 4000 : 1500,
-          temperature: extractGeometry ? 0.1 : 0.7
-        }
-      })
-    });
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Data,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: extractGeometry ? 4000 : 1500,
+            temperature: extractGeometry ? 0.1 : 0.7,
+          },
+        }),
+      }
+    );
 
+    // If Gemini returns non-2xx, attempt to surface the error
     if (!response.ok) {
-      const errorData = await response.json();
-      return res.status(response.status).json({ 
-        error: errorData.error?.message || 'Gemini API error' 
+      let errorData = null;
+      try {
+        errorData = await response.json();
+      } catch (_) {
+        // ignore parse error
+      }
+      return res.status(response.status).json({
+        error: errorData?.error?.message || "Gemini API error",
       });
     }
 
     const data = await response.json();
-    console.log('Gemini response received, candidates:', data.candidates?.length);
-    
-    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+    const analysisText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
     if (!analysisText) {
-      console.error('No analysis text in response:', JSON.stringify(data, null, 2));
-      return res.status(500).json({ error: 'No analysis text in API response' });
+      return res.status(500).json({
+        error: "No analysis text in API response",
+      });
     }
 
     // If geometry mode, try to parse JSON
     if (extractGeometry) {
       try {
+        // Extract the first JSON object from the response (robust to extra text)
         const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const geometry = JSON.parse(jsonMatch[0]);
-          console.log('Parsed geometry with', geometry.polylinePoints?.length || 0, 'points');
           return res.status(200).json({
             geometry,
             analysis: analysisText,
-            rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
-          });
-        } else {
-          console.error('No JSON found in response:', analysisText.substring(0, 500));
-          return res.status(200).json({ 
-            geometry: { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: ['Failed to parse geometry from AI response'] },
-            analysis: analysisText,
-            rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+            rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT },
           });
         }
-      } catch (parseErr) {
-        console.error('JSON parse error:', parseErr.message, 'Response:', analysisText.substring(0, 500));
-        return res.status(200).json({ 
-          geometry: { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: ['JSON parse error: ' + parseErr.message] },
+
+        return res.status(200).json({
+          geometry: {
+            plotBbox: null,
+            origin: { x: 0.5, y: 0.5 },
+            polylinePoints: [],
+            stormMotion: null,
+            plotRadius: null,
+            confidence: 0,
+            warnings: ["Failed to parse geometry from AI response"],
+          },
           analysis: analysisText,
-          rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+          rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT },
+        });
+      } catch (parseErr) {
+        return res.status(200).json({
+          geometry: {
+            plotBbox: null,
+            origin: { x: 0.5, y: 0.5 },
+            polylinePoints: [],
+            stormMotion: null,
+            plotRadius: null,
+            confidence: 0,
+            warnings: ["JSON parse error: " + parseErr.message],
+          },
+          analysis: analysisText,
+          rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT },
         });
       }
     }
 
-    return res.status(200).json({ 
+    // Normal analysis mode
+    return res.status(200).json({
       analysis: analysisText,
-      rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT }
+      rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT },
     });
-
   } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
-}
+};

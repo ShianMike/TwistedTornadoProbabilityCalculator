@@ -96,6 +96,11 @@ Please extract:
 
 7. **warnings**: Array of any issues encountered (e.g., "partial occlusion", "unclear origin", "ambiguous scale")
 
+8. **hazardAnalysis**: Assess severe weather potential based on the hodograph shape:
+   - **largeHail**: Object with "potential" (none/low/moderate/high/extreme) and "reasoning" (brief explanation)
+   - **straightLineWinds**: Object with "potential" (none/low/moderate/high/extreme) and "reasoning" (brief explanation)
+   - Consider: shear magnitude, hodograph length, curvature in mid-levels for hail; bulk shear and storm motion for winds
+
 RESPOND WITH ONLY VALID JSON in this exact format:
 {
   "plotBbox": {"xMin": 0.1, "yMin": 0.1, "xMax": 0.9, "yMax": 0.9},
@@ -104,7 +109,11 @@ RESPOND WITH ONLY VALID JSON in this exact format:
   "stormMotion": {"x": 0.6, "y": 0.4, "direction": 250, "speed": 35},
   "plotRadius": 80,
   "confidence": 0.85,
-  "warnings": []
+  "warnings": [],
+  "hazardAnalysis": {
+    "largeHail": {"potential": "moderate", "reasoning": "Strong mid-level shear supports hail growth"},
+    "straightLineWinds": {"potential": "high", "reasoning": "Long hodograph with strong bulk shear indicates damaging wind potential"}
+  }
 }
 
 If you cannot detect certain elements, use null for those fields.

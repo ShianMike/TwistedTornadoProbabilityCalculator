@@ -23,6 +23,7 @@ Predicts probability distribution across six tornado morphology types:
 - Gemini AI extracts wind profile geometry
 - 50/50 blend with thermodynamic data for improved predictions
 - Metrics: curvature, turning, kink detection, extension
+- **Hazard Analysis**: Large hail and straight-line wind potential assessment
 
 ### ⚡ Special Factors Detection
 - Rain-Wrapped Formation
@@ -34,7 +35,7 @@ Predicts probability distribution across six tornado morphology types:
 ## Usage
 
 ### Quick Start
-1. Open `index.html` in a modern browser or use this link https://shianmike.github.io/TwistedTornadoProbabilityCalculator/
+1. Open `index.html` in a modern browser
 2. Enter atmospheric parameters OR paste a screenshot from Twisted
 3. (Optional) Paste a hodograph image for enhanced prediction
 4. Click **Analyze** to see results
@@ -98,6 +99,13 @@ Created by **seanmike**
 This is a game/simulation tool for Twisted from Roblox. Predictions are based on simplified formulas inspired by real meteorological indices but are **not accurate for real weather prediction**. The hodograph analyzer uses AI which may produce varying results.
 
 ## Version History
+
+### v2.1.0 - Hazard Analysis
+- Added large hail potential assessment from hodograph
+- Added straight-line wind potential assessment
+- Hazard reasoning displayed below wind speed guide
+- Improved scrollbar in hodograph section
+- Fixed paste propagation to input section
 
 ### v2.0.0 - Hodograph Integration
 - Added AI-powered hodograph analyzer using Gemini 2.5 Flash

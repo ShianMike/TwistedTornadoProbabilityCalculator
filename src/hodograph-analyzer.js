@@ -292,6 +292,7 @@ IMPORTANT:
     const geometry = await extractGeometryFromImage(base64Image);
     const result = computeMetrics(geometry);
     result.rawGeometry = geometry;
+    result.hazardAnalysis = geometry.hazardAnalysis || null;
     return result;
   }
 
@@ -647,7 +648,7 @@ IMPORTANT:
    * Integrate metrics with TornadoCalculations via window.HODOGRAPH_DATA
    */
   function integrateWithTornadoCalculations(result) {
-    const { metrics, qc } = result;
+    const { metrics, qc, hazardAnalysis } = result;
     
     window.HODOGRAPH_DATA = {
       HODO_CURVATURE: metrics.curvatureIndex,
@@ -666,6 +667,57 @@ IMPORTANT:
     } else {
       console.log('⚠️ Confidence < 0.6: Metrics will NOT affect predictions');
     }
+
+    // Display hazard analysis if available
+    displayHazardAnalysis(hazardAnalysis, qc.confidence);
+  }
+
+  /**
+   * Display hazard analysis (hail and straight-line winds) in the results section
+   */
+  function displayHazardAnalysis(hazardAnalysis, confidence) {
+    const hazardsDiv = document.getElementById('hodographHazards');
+    const hailPotential = document.getElementById('hailPotential');
+    const windPotential = document.getElementById('windPotential');
+    const reasoningDiv = document.getElementById('hazardReasoning');
+
+    if (!hazardsDiv || !hailPotential || !windPotential) return;
+
+    // Only show if confidence is sufficient and hazard data exists
+    if (!hazardAnalysis || confidence < 0.5) {
+      hazardsDiv.style.display = 'none';
+      return;
+    }
+
+    const hail = hazardAnalysis.largeHail || { potential: 'unknown', reasoning: '' };
+    const wind = hazardAnalysis.straightLineWinds || { potential: 'unknown', reasoning: '' };
+
+    // Set values with appropriate styling
+    hailPotential.textContent = hail.potential || '--';
+    hailPotential.className = 'hazard-value ' + (hail.potential || 'none').toLowerCase();
+
+    windPotential.textContent = wind.potential || '--';
+    windPotential.className = 'hazard-value ' + (wind.potential || 'none').toLowerCase();
+
+    // Build reasoning text
+    let reasoning = '';
+    if (hail.reasoning) {
+      reasoning += `<strong>Hail:</strong> ${hail.reasoning}`;
+    }
+    if (wind.reasoning) {
+      if (reasoning) reasoning += '<br>';
+      reasoning += `<strong>Winds:</strong> ${wind.reasoning}`;
+    }
+    
+    if (reasoning && reasoningDiv) {
+      reasoningDiv.innerHTML = reasoning;
+      reasoningDiv.style.display = 'block';
+    } else if (reasoningDiv) {
+      reasoningDiv.style.display = 'none';
+    }
+
+    hazardsDiv.style.display = 'block';
+    console.log('Hazard analysis displayed:', hazardAnalysis);
   }
 
   function showHodographStatus(message, type = 'info') {

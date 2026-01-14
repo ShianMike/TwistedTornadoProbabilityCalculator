@@ -378,6 +378,26 @@
               The estimated wind speeds represent the <strong>maximum strength (peak winds)</strong> the tornado reaches at its most intense point, not average winds. Tornadoes fluctuate in intensity over their lifespan. These estimates are based on atmospheric parameters using a machine learning model.
             </div>
           </div>
+
+          <!-- Hodograph Hazard Analysis -->
+          <div id="hodographHazards" class="hodograph-hazards" style="display:none; margin-top: 16px;">
+            <div class="hazard-header">
+              <strong>🌀 Hodograph Hazard Analysis</strong>
+            </div>
+            <div class="hazard-grid">
+              <div class="hazard-item" id="hailHazard">
+                <span class="hazard-icon">🧊</span>
+                <span class="hazard-label">Large Hail:</span>
+                <span class="hazard-value" id="hailPotential">--</span>
+              </div>
+              <div class="hazard-item" id="windHazard">
+                <span class="hazard-icon">💨</span>
+                <span class="hazard-label">Straight-Line Winds:</span>
+                <span class="hazard-value" id="windPotential">--</span>
+              </div>
+            </div>
+            <div class="hazard-reasoning" id="hazardReasoning"></div>
+          </div>
         </div>
       </div>
     </section>

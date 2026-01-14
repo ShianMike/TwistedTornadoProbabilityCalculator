@@ -97,9 +97,17 @@ Please extract:
 7. **warnings**: Array of any issues encountered (e.g., "partial occlusion", "unclear origin", "ambiguous scale")
 
 8. **hazardAnalysis**: Assess severe weather potential based on the hodograph shape:
-   - **largeHail**: Object with "potential" (none/low/moderate/high/extreme) and "reasoning" (brief explanation)
-   - **straightLineWinds**: Object with "potential" (none/low/moderate/high/extreme) and "reasoning" (brief explanation)
-   - Consider: shear magnitude, hodograph length, curvature in mid-levels for hail; bulk shear and storm motion for winds
+   - **largeHail**: Object with:
+     - "maxSize": estimated maximum hail diameter in inches (e.g., 1.0, 1.75, 2.5, 4.0)
+     - "sizeRange": string like "1-2 inches" or "2-3 inches"
+     - "potential": (none/low/moderate/high/extreme)
+     - "reasoning": brief explanation
+   - **straightLineWinds**: Object with:
+     - "maxSpeed": estimated maximum wind gust in mph (e.g., 60, 80, 100)
+     - "speedRange": string like "60-80 mph" or "80-100 mph"  
+     - "potential": (none/low/moderate/high/extreme)
+     - "reasoning": brief explanation
+   - Base estimates on: hodograph length (longer = stronger updraft/downdraft), mid-level shear for hail, bulk shear for winds, storm motion speed
 
 RESPOND WITH ONLY VALID JSON in this exact format:
 {
@@ -111,8 +119,8 @@ RESPOND WITH ONLY VALID JSON in this exact format:
   "confidence": 0.85,
   "warnings": [],
   "hazardAnalysis": {
-    "largeHail": {"potential": "moderate", "reasoning": "Strong mid-level shear supports hail growth"},
-    "straightLineWinds": {"potential": "high", "reasoning": "Long hodograph with strong bulk shear indicates damaging wind potential"}
+    "largeHail": {"maxSize": 2.0, "sizeRange": "1.5-2.5 inches", "potential": "high", "reasoning": "Strong mid-level shear and curved hodograph support large hail growth"},
+    "straightLineWinds": {"maxSpeed": 85, "speedRange": "70-90 mph", "potential": "high", "reasoning": "Long hodograph with strong bulk shear indicates damaging wind potential"}
   }
 }
 

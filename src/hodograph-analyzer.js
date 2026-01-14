@@ -701,11 +701,24 @@ IMPORTANT:
     const hail = hazardAnalysis.largeHail || { potential: 'unknown', reasoning: '' };
     const wind = hazardAnalysis.straightLineWinds || { potential: 'unknown', reasoning: '' };
 
-    // Set values with appropriate styling
-    hailPotential.textContent = hail.potential || '--';
+    // Set hail value - show size if available, otherwise potential
+    if (hail.sizeRange) {
+      hailPotential.textContent = hail.sizeRange;
+    } else if (hail.maxSize) {
+      hailPotential.textContent = `${hail.maxSize}"`;
+    } else {
+      hailPotential.textContent = hail.potential || '--';
+    }
     hailPotential.className = 'hazard-value ' + (hail.potential || 'none').toLowerCase();
 
-    windPotential.textContent = wind.potential || '--';
+    // Set wind value - show speed if available, otherwise potential
+    if (wind.speedRange) {
+      windPotential.textContent = wind.speedRange;
+    } else if (wind.maxSpeed) {
+      windPotential.textContent = `${wind.maxSpeed} mph`;
+    } else {
+      windPotential.textContent = wind.potential || '--';
+    }
     windPotential.className = 'hazard-value ' + (wind.potential || 'none').toLowerCase();
 
     // Build reasoning text

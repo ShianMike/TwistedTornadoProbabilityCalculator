@@ -26,13 +26,21 @@
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     model: 'gemini-2.5-flash',
     maxTokens: 8000,  // Increased to prevent truncated responses
-    useServer: true   // PRODUCTION MODE - uses server endpoint with env variable
+    useServer: false   // Set to false for GitHub Pages, true for Vercel
   };
 
   // Load API key from config.js if available
   if (typeof API_CONFIG !== 'undefined' && API_CONFIG.GEMINI_API_KEY) {
     CONFIG.apiKey = API_CONFIG.GEMINI_API_KEY;
     console.log('Gemini API key loaded from config');
+  }
+  
+  // Show API key section if not using server
+  if (!CONFIG.useServer) {
+    const apiKeySection = document.getElementById('apiKeySection');
+    if (apiKeySection) {
+      apiKeySection.style.display = 'block';
+    }
   }
 
   // ========================================================================
@@ -346,7 +354,7 @@ IMPORTANT:
         return parseGeometryFromText(responseData.analysis);
 
       } else {
-        if (!CONFIG.apiKey) throw new Error('No API key configured');
+        if (!CONFIG.apiKey) throw new Error('No API key configured. Please enter your Gemini API key above.');
 
         const base64Data = base64Image.split(',')[1];
         const mimeType = base64Image.split(';')[0].split(':')[1] || 'image/png';

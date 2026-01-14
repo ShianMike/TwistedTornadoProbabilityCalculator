@@ -334,8 +334,17 @@ IMPORTANT:
           throw new Error(`Rate limit reached. Try again in ${Math.ceil((errorData.retryAfter || 3600) / 60)} minutes.`);
         }
 
+        if (response.status === 504) {
+          throw new Error('Server timeout. The AI is taking too long. Please try again with a smaller/simpler image.');
+        }
+
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch {
+            throw new Error(`Server error: ${response.status}`);
+          }
           console.error('[Hodograph] Server error:', errorData);
           throw new Error(errorData.error || `Server error: ${response.status}`);
         }

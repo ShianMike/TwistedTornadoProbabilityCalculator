@@ -25,17 +25,17 @@
     apiKey: '',
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     model: 'gemini-2.5-flash',
-    maxTokens: 8000,  // Increased to prevent truncated responses
-    useServer: false   // Set to false for GitHub Pages, true for Vercel
+    maxTokens: 8000,
+    useServer: window.location.hostname.includes('vercel.app')  // Auto-detect: true on Vercel, false on GitHub Pages
   };
 
-  // Load API key from config.js if available
+  // Load API key from config.js if available (for local testing only)
   if (typeof API_CONFIG !== 'undefined' && API_CONFIG.GEMINI_API_KEY) {
     CONFIG.apiKey = API_CONFIG.GEMINI_API_KEY;
     console.log('Gemini API key loaded from config');
   }
   
-  // Show API key section if not using server
+  // Show API key section if not using server (GitHub Pages)
   if (!CONFIG.useServer) {
     const apiKeySection = document.getElementById('apiKeySection');
     if (apiKeySection) {

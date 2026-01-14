@@ -142,10 +142,11 @@ Please analyze this hodograph and provide the following information:
 Please provide numerical estimates where possible and format your response clearly with sections.`;
 
 module.exports = async function handler(req, res) {
-  // Enable CORS
+  // Enable CORS - allow requests from GitHub Pages
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();

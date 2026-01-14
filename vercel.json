@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "api/analyze-hodograph.js": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node@3",
+      "maxDuration": 30
     }
   }
 }

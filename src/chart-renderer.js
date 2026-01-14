@@ -291,17 +291,17 @@
     ctx.shadowOffsetY = 1;
 
     // Speed range labels positioned in upper portion of canvas
-    ctx.font = '600 12px Inter, sans-serif';
+    ctx.font = '600 11px Inter, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.letterSpacing = '0';
     
     // Min speed centered on min bar
     ctx.textAlign = 'center';
-    ctx.fillText(`${estimate.est_min}`, minPos, -2);
+    ctx.fillText(`${estimate.est_min}`, minPos, 2);
     
     // Max speed centered on max bar
     ctx.textAlign = 'center';
-    ctx.fillText(`${estimate.est_max}`, maxPos, -2);
+    ctx.fillText(`${estimate.est_max}`, maxPos, 2);
 
     // Add thermal wind indicator if present and significant
     if (estimate.thermalContribution && estimate.thermalContribution > 5) {

@@ -21,26 +21,21 @@
   // CONFIGURATION
   // ========================================================================
   const CONFIG = {
-    serverEndpoint: '/api/analyze-hodograph',
+    // Use full Vercel URL for GitHub Pages, relative path for Vercel itself
+    serverEndpoint: window.location.hostname.includes('vercel.app') 
+      ? '/api/analyze-hodograph' 
+      : 'https://twistedtornado.vercel.app/api/analyze-hodograph',
     apiKey: '',
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     model: 'gemini-2.5-flash',
     maxTokens: 8000,
-    useServer: window.location.hostname.includes('vercel.app')  // Auto-detect: true on Vercel, false on GitHub Pages
+    useServer: true  // Always use server (Vercel API)
   };
 
   // Load API key from config.js if available (for local testing only)
   if (typeof API_CONFIG !== 'undefined' && API_CONFIG.GEMINI_API_KEY) {
     CONFIG.apiKey = API_CONFIG.GEMINI_API_KEY;
     console.log('Gemini API key loaded from config');
-  }
-  
-  // Show API key section if not using server (GitHub Pages)
-  if (!CONFIG.useServer) {
-    const apiKeySection = document.getElementById('apiKeySection');
-    if (apiKeySection) {
-      apiKeySection.style.display = 'block';
-    }
   }
 
   // ========================================================================

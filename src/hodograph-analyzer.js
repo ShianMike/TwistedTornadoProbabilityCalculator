@@ -73,42 +73,67 @@
   // ========================================================================
   // GEOMETRY EXTRACTION PROMPT
   // ========================================================================
-  const GEOMETRY_EXTRACTION_PROMPT = `Analyze this hodograph image and extract the colored wind trace.
+  const GEOMETRY_EXTRACTION_PROMPT = `
+You are extracting geometry from a hodograph image.
 
-WHAT TO EXTRACT:
-The hodograph shows a colored polyline representing wind at different heights. The line changes colors (typically magenta→red→yellow→green→cyan→blue) from surface to upper levels.
+TASK
+Extract ONLY the colored hodograph wind-trace polyline (the multicolor line) and key reference points.
 
-REQUIRED OUTPUT - JSON only:
+OUTPUT FORMAT
+Return ONLY valid JSON that matches EXACTLY this schema:
 {
-  "polylinePoints": [{"x": 0.3, "y": 0.6}, {"x": 0.35, "y": 0.55}, ...],
-  "origin": {"x": 0.25, "y": 0.7},
-  "stormMotion": {"direction": 250, "speed": 35},
-  "confidence": 0.8,
+  "polylinePoints": [{"x": 0.0, "y": 0.0}, ...],
+  "origin": {"x": 0.0, "y": 0.0},
+  "stormMotion": {"direction": null, "speed": null, "units": null},
+  "confidence": 0.0,
   "warnings": []
 }
 
-EXTRACTION RULES:
-1. polylinePoints: Trace the colored line from start to end
-   - Use normalized coordinates (0-1 for both x and y)
-   - x=0 is left edge, x=1 is right edge
-   - y=0 is TOP of image, y=1 is BOTTOM
-   - Include 10-30 points along the curve
-   - Start from the beginning of the curve (usually magenta/purple)
-   - End at the end of the curve (usually cyan/blue)
+COORDINATE SYSTEM (NORMALIZED)
+- x and y are normalized to the FULL IMAGE you are given:
+  x=0 is left edge, x=1 is right edge
+  y=0 is TOP edge, y=1 is BOTTOM edge
 
-2. origin: Where the axes cross (center of the plot)
-   - Usually where the white lines intersect
+WHAT TO TRACE (IMPORTANT)
+- Trace ONLY the colored hodograph line showing wind with height.
+- The trace is typically color-graded (magenta/purple -> red -> yellow/green -> cyan/blue).
+- DO NOT include:
+  - white axes lines
+  - dotted range rings / grid points
+  - tick marks
+  - storm-motion arrow graphic (unless extracting stormMotion separately)
+  - text labels (e.g., "63°", "70mph")
 
-3. stormMotion: If there's an arrow or text showing storm motion
-   - direction: degrees (meteorological: 0=North, 90=East)
-   - speed: in knots or mph if shown
+POLYLINE POINTS REQUIREMENTS
+- Provide 12–25 points total.
+- Points MUST follow the line in height order:
+  start at the FIRST/LOWEST-LEVEL end (usually magenta/purple)
+  end at the LAST/HIGHEST-LEVEL end (usually green/cyan/blue)
+- Include ALL major vertices:
+  - If the line has a sharp corner/kink, include points just before, at, and just after the corner.
+  - Do not "smooth out" corners.
+- Place points ON the CENTER of the colored stroke, not its outer edge.
+- If parts of the line are faint/occluded, estimate conservatively and add a warning.
 
-4. confidence: Your confidence 0.0-1.0 based on image clarity
+ORIGIN (AXES INTERSECTION)
+- Identify the thick white vertical and horizontal axes in the hodograph panel.
+- origin is the intersection of these axes.
+- If one axis is truncated/cropped, infer the intersection by extending the visible axis segments.
+- If origin cannot be located confidently, set origin to null and add a warning.
 
-IMPORTANT:
-- Trace the ENTIRE colored polyline carefully
-- The line may have sharp turns (kinks) - include those points
-- Output ONLY valid JSON, no other text`;
+STORM MOTION (OPTIONAL)
+- If the image contains a storm-motion arrow AND numeric direction/speed text:
+  - direction is the direction the storm is MOVING TOWARD, in degrees (0=N, 90=E, 180=S, 270=W).
+  - speed is the numeric speed.
+  - units must be one of: "kt", "mph", or null if unknown.
+- If not clearly present, set direction/speed/units to null.
+
+CONFIDENCE + WARNINGS
+- confidence: 0.0–1.0 reflecting clarity of the trace AND origin.
+- warnings: array of strings describing any uncertainty (e.g., "trace partially occluded", "origin inferred", "units unclear").
+
+RETURN JSON ONLY. No extra text.
+`;
 
   // Debug mode for development
   const DEBUG = true;
@@ -189,20 +214,16 @@ IMPORTANT:
   }
 
   /**
-   * Extension norm = max distance from origin normalized by plot size
+   * Extension norm = max distance from origin (already normalized 0-1)
    */
-  function calculateExtensionNorm(points, origin, plotBbox) {
+  function calculateExtensionNorm(points, origin) {
     if (!origin || points.length === 0) return 0;
-    const plotSize = Math.max(
-      (plotBbox?.xMax || 1) - (plotBbox?.xMin || 0),
-      (plotBbox?.yMax || 1) - (plotBbox?.yMin || 0)
-    );
     let maxDist = 0;
     for (const p of points) {
       const d = distance(p, origin);
       if (d > maxDist) maxDist = d;
     }
-    return plotSize > 0 ? maxDist / plotSize : maxDist;
+    return maxDist;
   }
 
   /**
@@ -226,7 +247,6 @@ IMPORTANT:
   function computeMetrics(geometry) {
     const points = geometry.polylinePoints || [];
     const origin = geometry.origin || { x: 0.5, y: 0.5 };
-    const plotBbox = geometry.plotBbox;
 
     if (points.length < 2) {
       return {
@@ -239,7 +259,7 @@ IMPORTANT:
     const curvatureIndex = calculateCurvatureIndex(points);
     const turningDeg = calculateTurningDeg(points);
     const kinkMaxDeg = calculateKinkMaxDeg(points);
-    const extensionNorm = calculateExtensionNorm(points, origin, plotBbox);
+    const extensionNorm = calculateExtensionNorm(points, origin);
     const compactness = calculateCompactness(points, origin);
 
     // Derive labels from metrics

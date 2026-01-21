@@ -433,6 +433,10 @@ RETURN JSON ONLY. No extra text.
     else if (curvatureIndex > 1.25) shapeType = 'STRONGLY_CURVED';
     else shapeType = 'MODERATELY_CURVED';
 
+    // Kink-dominant override: sharp kink + moderate curvature + not excessive turning
+    const kinkDominant = kinkMaxDeg > 70 && curvatureIndex > 1.4 && turningDeg < 220 && !hasLoop;
+    if (kinkDominant) shapeType = 'KINKED';
+
     // Low-level curvature (first 35% of filtered points, min 6 for stability)
     let lowLevelCurvature = 'MODERATE';
     const lowLevelPoints = pointsForAngles.slice(0, Math.max(6, Math.floor(pointsForAngles.length * 0.35)));

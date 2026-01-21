@@ -5,11 +5,11 @@
  * 1) extractGeometry: true  -> Returns structured JSON for metric calculation
  * 2) extractGeometry: false -> Returns human-readable analysis text
  *
- * RATE LIMITING: Max 10 requests per IP per hour
+ * RATE LIMITING: Max 30 requests per IP per hour
  */
 
 const rateLimitMap = new Map();
-const RATE_LIMIT = 10;
+const RATE_LIMIT = 30;
 const RATE_WINDOW = 60 * 60 * 1000;
 
 function getRateLimitKey(req) {

@@ -26,8 +26,8 @@
       ? '/api/analyze-hodograph' 
       : 'https://twisted-tornado-probability-calculator-shians-projects-7aecca1a.vercel.app/api/analyze-hodograph',
     apiKey: '',
-    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-    model: 'gemini-2.5-flash',
+    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',
+    model: 'gemini-2.5-pro',
     maxTokens: 8000,
     useServer: true  // Always use server (Vercel API)
   };
@@ -153,11 +153,11 @@ RETURN JSON ONLY. No extra text.
     return (angle + 360) % 360;
   }
 
-  function headingChange(angle1, angle2) {
+  function headingDeltaSigned(angle1, angle2) {
     let diff = angle2 - angle1;
     while (diff > 180) diff -= 360;
     while (diff < -180) diff += 360;
-    return Math.abs(diff);
+    return diff; // signed in [-180, 180]
   }
 
   function arcLength(points) {
@@ -173,6 +173,66 @@ RETURN JSON ONLY. No extra text.
     return distance(points[0], points[points.length - 1]);
   }
 
+  // ========================================================================
+  // PREPROCESSING: Remove jitter and resample for consistent metrics
+  // ========================================================================
+
+  /**
+   * Remove points that are too close together (denoising)
+   */
+  function simplifyByMinStep(points, minStep) {
+    if (!points || points.length === 0) return [];
+    const out = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      if (distance(out[out.length - 1], points[i]) >= minStep) out.push(points[i]);
+    }
+    // Ensure last point kept
+    if (out.length === 1 && points.length > 1) out.push(points[points.length - 1]);
+    return out;
+  }
+
+  /**
+   * Resample polyline to uniform arc-length spacing
+   */
+  function resampleByArcLength(points, targetCount) {
+    if (!points || points.length < 2) return points || [];
+
+    const total = arcLength(points);
+    if (total === 0) return [points[0]];
+
+    const step = total / (targetCount - 1);
+    const out = [points[0]];
+
+    let segStartIdx = 0;
+    let distAccum = 0;
+
+    for (let k = 1; k < targetCount - 1; k++) {
+      const targetDist = k * step;
+
+      while (segStartIdx < points.length - 1) {
+        const a = points[segStartIdx];
+        const b = points[segStartIdx + 1];
+        const segLen = distance(a, b);
+
+        if (distAccum + segLen >= targetDist) {
+          const t = (targetDist - distAccum) / (segLen || 1e-9);
+          out.push({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
+          break;
+        } else {
+          distAccum += segLen;
+          segStartIdx++;
+        }
+      }
+    }
+
+    out.push(points[points.length - 1]);
+    return out;
+  }
+
+  // ========================================================================
+  // METRIC CALCULATIONS
+  // ========================================================================
+
   /**
    * Curvature index = arc length / chord length
    * 1.0 = perfectly straight, >1.25 = significantly curved
@@ -185,45 +245,121 @@ RETURN JSON ONLY. No extra text.
   }
 
   /**
-   * Total turning = sum of all heading changes along polyline
+   * Calculate both absolute and net turning
+   * absolute = total bending, net = signed rotation (CW vs CCW)
    */
-  function calculateTurningDeg(points) {
-    if (points.length < 3) return 0;
-    let totalTurning = 0;
+  function calculateTurning(points) {
+    if (points.length < 3) return { absolute: 0, net: 0 };
+
+    let absSum = 0;
+    let netSum = 0;
+
     for (let i = 2; i < points.length; i++) {
       const h1 = heading(points[i - 2], points[i - 1]);
       const h2 = heading(points[i - 1], points[i]);
-      totalTurning += headingChange(h1, h2);
+      const d = headingDeltaSigned(h1, h2);
+      absSum += Math.abs(d);
+      netSum += d;
     }
-    return totalTurning;
+
+    return { absolute: absSum, net: netSum };
   }
 
   /**
-   * Max kink = single largest heading change (shear discontinuity indicator)
+   * Max kink = single largest heading change using 2-step window
+   * Uses wider chord to reduce jitter sensitivity
    */
   function calculateKinkMaxDeg(points) {
-    if (points.length < 3) return 0;
+    if (points.length < 5) return 0;
+
     let maxKink = 0;
-    for (let i = 2; i < points.length; i++) {
-      const h1 = heading(points[i - 2], points[i - 1]);
-      const h2 = heading(points[i - 1], points[i]);
-      const kink = headingChange(h1, h2);
+    for (let i = 2; i < points.length - 2; i++) {
+      // Use a 2-step chord on each side to reduce jitter sensitivity
+      const h1 = heading(points[i - 2], points[i]);
+      const h2 = heading(points[i], points[i + 2]);
+      const kink = Math.abs(headingDeltaSigned(h1, h2));
       if (kink > maxKink) maxKink = kink;
     }
     return maxKink;
   }
 
+  // ========================================================================
+  // LOOP DETECTION
+  // ========================================================================
+
   /**
-   * Extension norm = max distance from origin (already normalized 0-1)
+   * Check if two line segments intersect
+   */
+  function segmentsIntersect(a, b, c, d) {
+    function ccw(p1, p2, p3) {
+      return (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+    }
+    return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
+  }
+
+  /**
+   * Detect if polyline crosses itself
+   */
+  function hasSelfIntersection(points) {
+    for (let i = 0; i < points.length - 3; i++) {
+      for (let j = i + 2; j < points.length - 1; j++) {
+        // Skip adjacent segments sharing a point
+        if (j === i + 1) continue;
+        if (segmentsIntersect(points[i], points[i + 1], points[j], points[j + 1])) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Calculate polar angle of point relative to origin
+   */
+  function polarAngle(p, origin) {
+    return Math.atan2(p.y - origin.y, p.x - origin.x) * (180 / Math.PI);
+  }
+
+  /**
+   * Calculate winding angle around origin (signed degrees)
+   * >220° indicates a loop wrap
+   */
+  function windingDeg(points, origin) {
+    if (!origin || points.length < 2) return 0;
+    let sum = 0;
+    for (let i = 1; i < points.length; i++) {
+      const a1 = polarAngle(points[i - 1], origin);
+      const a2 = polarAngle(points[i], origin);
+      let d = a2 - a1;
+      while (d > 180) d -= 360;
+      while (d < -180) d += 360;
+      sum += d;
+    }
+    return sum; // signed
+  }
+
+  // ========================================================================
+  // EXTENSION AND COMPACTNESS
+  // ========================================================================
+
+  /**
+   * Normalize radius by max possible distance to image edge
+   */
+  function normalizeRadius(r, origin) {
+    const maxX = Math.max(origin.x, 1 - origin.x);
+    const maxY = Math.max(origin.y, 1 - origin.y);
+    const maxR = Math.sqrt(maxX * maxX + maxY * maxY);
+    return maxR > 0 ? r / maxR : 0;
+  }
+
+  /**
+   * Extension norm = max distance from origin, normalized to [0,1]
    */
   function calculateExtensionNorm(points, origin) {
     if (!origin || points.length === 0) return 0;
     let maxDist = 0;
     for (const p of points) {
-      const d = distance(p, origin);
-      if (d > maxDist) maxDist = d;
+      maxDist = Math.max(maxDist, distance(p, origin));
     }
-    return maxDist;
+    return normalizeRadius(maxDist, origin);
   }
 
   /**
@@ -235,7 +371,7 @@ RETURN JSON ONLY. No extra text.
     for (const p of points) {
       const d = distance(p, origin);
       totalDist += d;
-      if (d > maxDist) maxDist = d;
+      maxDist = Math.max(maxDist, d);
     }
     const meanDist = totalDist / points.length;
     return maxDist > 0 ? meanDist / maxDist : 1.0;
@@ -245,50 +381,76 @@ RETURN JSON ONLY. No extra text.
    * Compute all metrics from extracted geometry
    */
   function computeMetrics(geometry) {
-    const points = geometry.polylinePoints || [];
+    let points = geometry.polylinePoints || [];
     const origin = geometry.origin || { x: 0.5, y: 0.5 };
 
     if (points.length < 2) {
       return {
-        metrics: { curvatureIndex: 1.0, turningDeg: 0, kinkMaxDeg: 0, extensionNorm: 0, compactness: 1.0 },
+        metrics: { curvatureIndex: 1.0, turningDeg: 0, netTurningDeg: 0, kinkMaxDeg: 0, extensionNorm: 0, compactness: 1.0 },
         labels: { shapeType: 'UNKNOWN', lowLevelCurvature: 'UNKNOWN', stormModeHint: 'UNKNOWN' },
         qc: { confidence: 0, warnings: ['Insufficient points extracted'] }
       };
     }
 
+    // 1) Remove jitter: min segment length scaled to polyline length (self-tuning)
+    const L = arcLength(points);
+    const minStep = Math.max(0.003, Math.min(0.01, L / 250));
+    points = simplifyByMinStep(points, minStep);
+
+    // 2) Uniformize sampling (important for angle metrics)
+    points = resampleByArcLength(points, Math.min(21, Math.max(12, points.length)));
+
+    // Compute metrics on cleaned points
     const curvatureIndex = calculateCurvatureIndex(points);
-    const turningDeg = calculateTurningDeg(points);
+    const turning = calculateTurning(points);
+    const turningDeg = turning.absolute;
+    const netTurningDeg = turning.net;
     const kinkMaxDeg = calculateKinkMaxDeg(points);
     const extensionNorm = calculateExtensionNorm(points, origin);
     const compactness = calculateCompactness(points, origin);
 
+    // Loop detection - gate self-intersection with winding to prevent false positives
+    const wind = windingDeg(points, origin);
+    const hasLoop = (Math.abs(wind) > 220) || (hasSelfIntersection(points) && Math.abs(wind) > 140);
+
     // Derive labels from metrics
     let shapeType = 'CURVED';
-    if (curvatureIndex < 1.10) shapeType = 'STRAIGHT';
-    else if (curvatureIndex > 1.50) shapeType = 'LOOPED';
+    if (hasLoop) shapeType = 'LOOPED';
+    else if (curvatureIndex < 1.10) shapeType = 'STRAIGHT';
     else if (curvatureIndex > 1.25) shapeType = 'STRONGLY_CURVED';
+    else shapeType = 'MODERATELY_CURVED';
 
+    // Low-level curvature (first 35% of points, min 6 for stability)
     let lowLevelCurvature = 'MODERATE';
-    const lowLevelPoints = points.slice(0, Math.max(2, Math.floor(points.length * 0.25)));
-    const llTurning = calculateTurningDeg(lowLevelPoints);
-    if (llTurning > 60) lowLevelCurvature = 'STRONG';
-    else if (llTurning < 20) lowLevelCurvature = 'WEAK';
+    const lowLevelPoints = points.slice(0, Math.max(6, Math.floor(points.length * 0.35)));
+    const llTurning = calculateTurning(lowLevelPoints);
+    if (llTurning.absolute > 60) lowLevelCurvature = 'STRONG';
+    else if (llTurning.absolute < 20) lowLevelCurvature = 'WEAK';
 
-    let stormModeHint = 'SUPERCELL';
+    // Storm mode classification
+    let stormModeHint = 'SUPERCELL_POSSIBLE';
     if (curvatureIndex < 1.10 && extensionNorm > 0.6) stormModeHint = 'LINEAR';
-    else if (curvatureIndex > 1.40 && turningDeg > 90) stormModeHint = 'STRONG_SUPERCELL';
+    else if (lowLevelCurvature === 'STRONG' && extensionNorm > 0.55) stormModeHint = 'SUPERCELL';
+    else if (hasLoop && extensionNorm > 0.55) stormModeHint = 'SUPERCELL';
     else if (compactness > 0.8) stormModeHint = 'WEAK_CONVECTIVE';
+
+    // QC sanity checks
+    const qcWarnings = geometry.warnings ? [...geometry.warnings] : [];
+    if (turningDeg > 420 && !hasLoop) qcWarnings.push('Turning unusually high without loop detection (possible jitter)');
+    if (kinkMaxDeg > 120) qcWarnings.push('Max kink extremely high (possible extraction error)');
+    if (!geometry.origin) qcWarnings.push('Origin missing; extension/compactness may be unreliable');
 
     return {
       metrics: {
         curvatureIndex: Math.round(curvatureIndex * 100) / 100,
         turningDeg: Math.round(turningDeg),
+        netTurningDeg: Math.round(netTurningDeg),
         kinkMaxDeg: Math.round(kinkMaxDeg),
         extensionNorm: Math.round(extensionNorm * 100) / 100,
         compactness: Math.round(compactness * 100) / 100
       },
       labels: { shapeType, lowLevelCurvature, stormModeHint },
-      qc: { confidence: geometry.confidence || 0.5, warnings: geometry.warnings || [] }
+      qc: { confidence: geometry.confidence || 0.5, warnings: qcWarnings }
     };
   }
 
@@ -636,6 +798,11 @@ RETURN JSON ONLY. No extra text.
             <td style="padding: 4px 0 4px 8px; color: ${metrics.turningDeg >= 90 ? '#00ff88' : '#888'}; font-size: 11px;">${metrics.turningDeg >= 90 ? 'High rotation' : metrics.turningDeg >= 45 ? 'Moderate' : 'Low'}</td>
           </tr>
           <tr style="border-bottom: 1px solid #333;">
+            <td style="padding: 4px 0; color: #888;">Net Turning</td>
+            <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.netTurningDeg}°</td>
+            <td style="padding: 4px 0 4px 8px; color: ${metrics.netTurningDeg > 0 ? '#00c8ff' : metrics.netTurningDeg < 0 ? '#ff88ff' : '#888'}; font-size: 11px;">${metrics.netTurningDeg > 0 ? 'CW' : metrics.netTurningDeg < 0 ? 'CCW' : 'Neutral'}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #333;">
             <td style="padding: 4px 0; color: #888;">Max Kink</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.kinkMaxDeg}°</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.kinkMaxDeg >= 45 ? '#ff6600' : '#888'}; font-size: 11px;">${metrics.kinkMaxDeg >= 45 ? 'Shear discontinuity' : 'Smooth'}</td>
@@ -654,9 +821,9 @@ RETURN JSON ONLY. No extra text.
 
         <h4 style="margin: 0 0 8px 0; color: #00c8ff; border-bottom: 1px solid #333; padding-bottom: 5px;">CLASSIFICATION</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
-          <tr><td style="padding: 3px 0; color: #888;">Shape</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.shapeType}</td></tr>
+          <tr><td style="padding: 3px 0; color: #888;">Shape</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.shapeType.replace(/_/g, ' ')}</td></tr>
           <tr><td style="padding: 3px 0; color: #888;">Low-Level Curvature</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.lowLevelCurvature}</td></tr>
-          <tr><td style="padding: 3px 0; color: #888;">Storm Mode</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.stormModeHint}</td></tr>
+          <tr><td style="padding: 3px 0; color: #888;">Storm Mode</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.stormModeHint.replace(/_/g, ' ')}</td></tr>
         </table>
 
         <div style="background: ${qc.confidence >= 0.6 ? 'rgba(0,255,136,0.1)' : 'rgba(255,100,0,0.1)'}; border: 1px solid ${qc.confidence >= 0.6 ? 'rgba(0,255,136,0.3)' : 'rgba(255,100,0,0.3)'}; border-radius: 4px; padding: 8px; margin-top: 8px;">
@@ -682,6 +849,7 @@ RETURN JSON ONLY. No extra text.
     window.HODOGRAPH_DATA = {
       HODO_CURVATURE: metrics.curvatureIndex,
       HODO_TURNING: metrics.turningDeg,
+      HODO_NET_TURNING: metrics.netTurningDeg,
       HODO_KINK: metrics.kinkMaxDeg,
       HODO_EXTENSION: metrics.extensionNorm,
       HODO_COMPACTNESS: metrics.compactness,

@@ -1,0 +1,25 @@
+# Python training and model files (not needed for production)
+*.py
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+models/
+data/*.csv
+
+# Development files
+*.md
+!docs/README.md
+.git/
+.gitignore
+.vscode/
+
+# Requirements file (Python only)
+requirements.txt
+
+# Log and environment files
+*.log
+.env*
+config.js
+*.local

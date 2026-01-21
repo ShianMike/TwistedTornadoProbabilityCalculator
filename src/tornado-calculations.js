@@ -157,17 +157,18 @@
     // ========================================================================
     // Read hodograph metrics from global state if available and confident
     const hodo = window.HODOGRAPH_DATA || {};
-    const hodoConf = hodo.HODO_CONF || 0;
+    const hodoConf = typeof hodo.HODO_CONF === 'number' ? hodo.HODO_CONF : 0;
     const useHodo = hodoConf >= 0.6; // Only trust hodograph data if confidence >= 60%
     
-    const HODO_CURVATURE = useHodo ? (hodo.HODO_CURVATURE || 1.0) : 1.0;
-    const HODO_TURNING = useHodo ? (hodo.HODO_TURNING || 0) : 0;
-    const HODO_NET_TURNING = useHodo ? (hodo.HODO_NET_TURNING || 0) : 0;
-    const HODO_KINK = useHodo ? (hodo.HODO_KINK || 0) : 0;
-    const HODO_EXTENSION = useHodo ? (hodo.HODO_EXTENSION || 0.5) : 0.5;
-    const HODO_COMPACTNESS = useHodo ? (hodo.HODO_COMPACTNESS || 0.5) : 0.5;
-    const HODO_SHAPE = useHodo ? (hodo.HODO_SHAPE || '') : '';
-    const HODO_HAS_LOOP = useHodo ? (hodo.HODO_HAS_LOOP || false) : false;
+    // Type-safe extraction with validation
+    const HODO_CURVATURE = useHodo && typeof hodo.HODO_CURVATURE === 'number' ? hodo.HODO_CURVATURE : 1.0;
+    const HODO_TURNING = useHodo && typeof hodo.HODO_TURNING === 'number' ? hodo.HODO_TURNING : 0;
+    const HODO_NET_TURNING = useHodo && typeof hodo.HODO_NET_TURNING === 'number' ? hodo.HODO_NET_TURNING : 0;
+    const HODO_KINK = useHodo && typeof hodo.HODO_KINK === 'number' ? hodo.HODO_KINK : 0;
+    const HODO_EXTENSION = useHodo && typeof hodo.HODO_EXTENSION === 'number' ? hodo.HODO_EXTENSION : 0.5;
+    const HODO_COMPACTNESS = useHodo && typeof hodo.HODO_COMPACTNESS === 'number' ? hodo.HODO_COMPACTNESS : 0.5;
+    const HODO_SHAPE = useHodo && typeof hodo.HODO_SHAPE === 'string' ? hodo.HODO_SHAPE : '';
+    const HODO_HAS_LOOP = useHodo && typeof hodo.HODO_HAS_LOOP === 'boolean' ? hodo.HODO_HAS_LOOP : false;
 
     // ========================================================================
     // COMPUTE BAROCLINIC FORCING PROXY

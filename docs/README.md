@@ -6,23 +6,24 @@ A web-based prediction tool for the Roblox game **Twisted** that analyzes atmosp
 
 ### 🌪️ Tornado Type Classification
 Predicts probability distribution across six tornado morphology types:
-- **Rope** - Thin, columnar structure
-- **Cone** - Traditional funnel cloud
-- **Stovepipe** - Cylindrical, organized rotation
-- **Wedge** - Wide-based, highest wind speeds
-- **Drillbit** - Narrow, high velocity rotation
-- **Sidewinder** - Horizontal rotating vortex
+- **Rope** - Thin, weak tornadoes in marginal conditions
+- **Cone** - Classic funnel shape, most common type
+- **Stovepipe** - Tall cylindrical structure, strong organized rotation
+- **Wedge** - Wide-based, highest wind speeds, requires extreme instability
+- **Drillbit** - Compact, intense, extreme kinematic profile
+- **Sidewinder** - Fast-moving with kinked/elongated hodograph, high storm motion
 
 ### 📊 Wind Speed Prediction
-- SVM model with 98.52% accuracy
+- Empirical regression model calibrated on 121 tornado events
 - EF-Scale classification (EF0-EF5)
+- Baroclinic forcing proxy for improved accuracy
 - Theoretical maximum calculations
 
-### 🔍 AI Hodograph Analyzer (NEW!)
+### 🔍 AI Hodograph Analyzer
 - Upload or paste hodograph images
-- Gemini AI extracts wind profile geometry
-- 50/50 blend with thermodynamic data for improved predictions
-- Metrics: curvature, turning, kink detection, extension
+- Gemini 2.5 Pro Vision extracts wind profile geometry
+- Deterministic shape metrics: curvature, turning, kink, extension, compactness
+- Loop detection for extreme rotation signatures
 - **Hazard Analysis**: Large hail and straight-line wind potential assessment
 
 ### ⚡ Special Factors Detection
@@ -64,11 +65,12 @@ Predicts probability distribution across six tornado morphology types:
 
 ## Technology
 
-- **Frontend**: Vanilla JavaScript, Chart.js
+- **Frontend**: Vanilla JavaScript, Chart.js 4.4.0
 - **OCR**: Tesseract.js for image text extraction
-- **AI**: Google Gemini 2.5 Flash for hodograph analysis
-- **ML Model**: Support Vector Machine (SVM) with RBF kernel
+- **AI**: Google Gemini 2.5 Pro for hodograph geometry extraction
+- **ML Model**: Empirical weighted regression (calibrated on game data)
 - **Hosting**: Vercel (static + serverless functions)
+- **Shared Types**: Centralized tornado-types.js module
 
 ## Development
 
@@ -80,6 +82,9 @@ npx http-server .
 
 For hodograph analysis, set `useServer: false` in `src/hodograph-analyzer.js` and add your Gemini API key.
 
+### Debug Mode
+Set `DEBUG: true` in `src/tornado-types.js` to enable verbose console logging.
+
 ### Production Deployment
 1. Push to GitHub
 2. Connect to Vercel
@@ -87,8 +92,9 @@ For hodograph analysis, set `useServer: false` in `src/hodograph-analyzer.js` an
 
 ## Rate Limits
 
-- **Hodograph Analysis**: 10 requests/minute (client-side limit)
-- **Gemini API**: 20 requests/day (free tier)
+- **Hodograph Analysis**: 30 requests/hour per IP (server-side enforced)
+- **Client-side**: 10 requests/minute (pre-flight check)
+- **Payload Limit**: 10MB maximum image size
 
 ## Credits
 
@@ -100,6 +106,18 @@ This is a game/simulation tool for Twisted from Roblox. Predictions are based on
 
 ## Version History
 
+### v2.2.0 - Code Quality & Production Hardening
+- **Shared Module**: Centralized tornado types, descriptions, and colors in `tornado-types.js`
+- **DEBUG Gating**: All console.log statements now gated behind DEBUG flag
+- **API Hardening**: 10MB payload size limit, improved rate limiting
+- **Cache Headers**: Static assets now have 1-year cache headers
+- **Type Guards**: HODOGRAPH_DATA fields now have typeof validation
+- **Deployment**: Added `.vercelignore` to exclude Python/dev files
+- **Naming Fix**: Renamed misleading "SVM" to "Empirical Regression" model
+- **SIDEWINDER Fix**: Now kinematic-driven (fast + kinked hodograph)
+- **Loop Detection**: Robust orientation-based intersection detection
+- **Normalization**: Probabilities now always sum to exactly 100%
+
 ### v2.1.0 - Hazard Analysis
 - Added large hail potential assessment from hodograph
 - Added straight-line wind potential assessment
@@ -108,7 +126,7 @@ This is a game/simulation tool for Twisted from Roblox. Predictions are based on
 - Fixed paste propagation to input section
 
 ### v2.0.0 - Hodograph Integration
-- Added AI-powered hodograph analyzer using Gemini 2.5 Flash
+- Added AI-powered hodograph analyzer using Gemini Vision
 - 50/50 blend scoring with thermodynamic and hodograph metrics
 - Auto-analyze on image load/paste
 - Rate limiting (10 requests/minute)
@@ -125,9 +143,9 @@ This is a game/simulation tool for Twisted from Roblox. Predictions are based on
 - Improved number parsing
 
 ### v1.3.0 - Model Updates
-- SVM model with 98.52% accuracy
-- Random Forest comparison results
 - Enhanced wind speed predictions
+- Random Forest comparison results
+- Improved accuracy metrics
 
 ### v1.2.0 - UI Refresh
 - New card-based layout

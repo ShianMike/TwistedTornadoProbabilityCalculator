@@ -32,10 +32,21 @@
     useServer: true  // Always use server (Vercel API)
   };
 
+  // Debug flag - set to true for verbose logging
+  const DEBUG = (typeof window.TornadoTypes !== 'undefined' && window.TornadoTypes.DEBUG) || false;
+  
+  /**
+   * Conditional logging - only logs when DEBUG is true
+   * @param  {...any} args - Arguments to log
+   */
+  function debugLog(...args) {
+    if (DEBUG) console.log('[Hodograph]', ...args);
+  }
+
   // Load API key from config.js if available (for local testing only)
   if (typeof API_CONFIG !== 'undefined' && API_CONFIG.GEMINI_API_KEY) {
     CONFIG.apiKey = API_CONFIG.GEMINI_API_KEY;
-    console.log('Gemini API key loaded from config');
+    debugLog('Gemini API key loaded from config');
   }
 
   // ========================================================================
@@ -134,9 +145,6 @@ CONFIDENCE + WARNINGS
 
 RETURN JSON ONLY. No extra text.
 `;
-
-  // Debug mode for development
-  const DEBUG = true;
 
   // ========================================================================
   // DETERMINISTIC METRIC CALCULATIONS
@@ -564,14 +572,14 @@ RETURN JSON ONLY. No extra text.
 
       if (CONFIG.useServer) {
         RATE_LIMIT.recordRequest();
-        console.log('[Hodograph] Calling server endpoint...');
+        debugLog('Calling server endpoint...');
         const response = await fetch(CONFIG.serverEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64Image, extractGeometry: true })
         });
 
-        console.log('[Hodograph] Server response status:', response.status);
+        debugLog('Server response status:', response.status);
 
         if (response.status === 429) {
           const errorData = await response.json();
@@ -589,15 +597,15 @@ RETURN JSON ONLY. No extra text.
           } catch {
             throw new Error(`Server error: ${response.status}`);
           }
-          console.error('[Hodograph] Server error:', errorData);
+          if (DEBUG) console.error('[Hodograph] Server error:', errorData);
           throw new Error(errorData.error || `Server error: ${response.status}`);
         }
 
         responseData = await response.json();
-        console.log('[Hodograph] Server response:', responseData);
+        debugLog('Server response:', responseData);
         
         if (responseData.geometry) {
-          console.log('[Hodograph] Geometry received with', responseData.geometry.polylinePoints?.length || 0, 'points');
+          debugLog('Geometry received with', responseData.geometry.polylinePoints?.length || 0, 'points');
           return responseData.geometry;
         }
         return parseGeometryFromText(responseData.analysis);
@@ -638,7 +646,7 @@ RETURN JSON ONLY. No extra text.
         if (DEBUG) console.log('Full Gemini response:', JSON.stringify(data, null, 2));
         
         if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
-          console.error('Unexpected response structure:', data);
+          if (DEBUG) console.error('Unexpected response structure:', data);
           return { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: ['Invalid API response structure'] };
         }
         
@@ -647,7 +655,7 @@ RETURN JSON ONLY. No extra text.
         return parseGeometryFromText(responseText);
       }
     } catch (error) {
-      console.error('Geometry extraction error:', error);
+      if (DEBUG) console.error('Geometry extraction error:', error);
       return { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: [`Extraction failed: ${error.message}`] };
     }
   }
@@ -668,7 +676,7 @@ RETURN JSON ONLY. No extra text.
       }
       throw new Error('No JSON found in response');
     } catch (error) {
-      console.error('Parse error:', error, 'Text:', text);
+      if (DEBUG) console.error('Parse error:', error, 'Text:', text);
       return { polylinePoints: [], origin: { x: 0.5, y: 0.5 }, confidence: 0, warnings: [`Parse error: ${error.message}`] };
     }
   }
@@ -766,7 +774,7 @@ RETURN JSON ONLY. No extra text.
       }
     }, true);
 
-    console.log('Hodograph analyzer v2.0 initialized (with tornado integration)');
+    debugLog('Hodograph analyzer v2.0 initialized (with tornado integration)');
   }
 
   function loadHodographImage(file) {
@@ -833,7 +841,7 @@ RETURN JSON ONLY. No extra text.
       showHodographStatus(statusMsg, 'success');
 
     } catch (error) {
-      console.error('Hodograph analysis error:', error);
+      if (DEBUG) console.error('Hodograph analysis error:', error);
       showHodographStatus(`Analysis failed: ${error.message}`, 'error');
     }
   }
@@ -942,13 +950,13 @@ RETURN JSON ONLY. No extra text.
       HODO_WINDING: derived?.windingDeg || 0
     };
 
-    console.log('Hodograph data integrated:', window.HODOGRAPH_DATA);
+    debugLog('Hodograph data integrated:', window.HODOGRAPH_DATA);
     
     if (qc.confidence >= 0.6) {
-      console.log('✅ Confidence >= 0.6: Metrics WILL affect tornado morphology predictions');
-      console.log('💡 Change any weather input value to trigger recalculation with hodograph data');
+      debugLog('✅ Confidence >= 0.6: Metrics WILL affect tornado morphology predictions');
+      debugLog('💡 Change any weather input value to trigger recalculation with hodograph data');
     } else {
-      console.log('⚠️ Confidence < 0.6: Metrics will NOT affect predictions');
+      debugLog('⚠️ Confidence < 0.6: Metrics will NOT affect predictions');
     }
 
     // Display hazard analysis if available
@@ -1013,7 +1021,7 @@ RETURN JSON ONLY. No extra text.
     }
 
     hazardsDiv.style.display = 'block';
-    console.log('Hazard analysis displayed:', hazardAnalysis);
+    debugLog('Hazard analysis displayed:', hazardAnalysis);
   }
 
   function showHodographStatus(message, type = 'info') {

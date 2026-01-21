@@ -8,43 +8,33 @@
   'use strict';
 
   // ============================================================================
-  // TORNADO TYPE DESCRIPTIONS
+  // DEBUG FLAG - Uses shared module or fallback
   // ============================================================================
+  const DEBUG = (window.TornadoTypes && window.TornadoTypes.DEBUG) || false;
   
-  // Detailed descriptions for tooltip display
-  const tornadoDescriptions = {
-    'ROPE': 'Thin, weak tornado often in marginal conditions. Low CAPE, weak rotation, dissipating stage of supercells.',
-    'CONE': 'Classic tornado funnel shape. Balanced atmospheric conditions with moderate instability and rotation.',
-    'STOVEPIPE': 'Cylindrical, strong tornado (stovepipe shape). High instability, strong rotation, steep lapse rates.',
-    'WEDGE': 'Very wide tornado, often violent (>0.5 mile wide). High moisture, slow storm motion, extreme conditions.',
-    'DRILLBIT': 'Fast-moving, narrow tornado in dry, linear-shear environment. High storm speed, low moisture.',
-    'SIDEWINDER': 'Fast-moving, kinked/elongated hodograph tornado. High storm speed, strong shear, lateral translation.'
-  };
+  function debugLog(...args) {
+    if (DEBUG) console.log('[ChartRenderer]', ...args);
+  }
 
   // ============================================================================
-  // TORNADO TYPE DISPLAY NAMES
+  // TORNADO TYPE DATA - Use shared module with fallback
   // ============================================================================
   
-  /**
-   * Map internal type keys to display names
-   * Used for consistent display across the UI
-   */
-  const tornadoDisplayNames = {
-    'ROPE': 'ROPE',
-    'CONE': 'CONE', 
-    'STOVEPIPE': 'STOVEPIPE',
-    'WEDGE': 'WEDGE',
-    'DRILLBIT': 'DRILLBIT',
-    'SIDEWINDER': 'SIDEWINDER'
-  };
+  function getTornadoDescriptions() {
+    return (window.TornadoTypes && window.TornadoTypes.DESCRIPTIONS) || {
+      'ROPE': 'Thin, weak tornado often in marginal conditions.',
+      'CONE': 'Classic tornado funnel shape.',
+      'STOVEPIPE': 'Cylindrical, strong tornado.',
+      'WEDGE': 'Very wide tornado, often violent.',
+      'DRILLBIT': 'Fast-moving, narrow tornado.',
+      'SIDEWINDER': 'Fast-moving, kinked hodograph tornado.'
+    };
+  }
 
-  /**
-   * Get display name for a tornado type
-   * @param {string} type - Internal tornado type key
-   * @returns {string} Display name
-   */
   function getDisplayName(type) {
-    return tornadoDisplayNames[type] || type;
+    return (window.TornadoTypes && window.TornadoTypes.getDisplayName) 
+      ? window.TornadoTypes.getDisplayName(type) 
+      : type;
   }
 
   // ============================================================================
@@ -66,7 +56,7 @@
       if (!window._chartDataLabelsRegistered) {
         Chart.register(ChartDataLabels);
         window._chartDataLabelsRegistered = true;
-        console.log('[ChartRenderer] ChartDataLabels registered successfully');
+        debugLog('ChartDataLabels registered successfully');
       }
     } catch (e) {
       // Silently ignore - probably already registered
@@ -157,11 +147,11 @@
    */
   function drawMiniWind(canvas, estimate) {
     if (!canvas || !estimate) {
-      console.warn('[ChartRenderer] Missing canvas or estimate');
+      if (DEBUG) console.warn('[ChartRenderer] Missing canvas or estimate');
       return;
     }
 
-    console.log('[ChartRenderer] Drawing wind bar with estimate:', estimate);
+    debugLog('Drawing wind bar with estimate:', estimate);
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
     
@@ -318,7 +308,7 @@
 
     ctx.restore();
 
-    console.log('[ChartRenderer] Wind bar drawn successfully');
+    debugLog('Wind bar drawn successfully');
   }
 
   // ============================================================================
@@ -327,9 +317,8 @@
   
   // Export functions to global scope
   window.ChartRenderer = {
-    tornadoDescriptions,
-    tornadoDisplayNames,
-    getDisplayName,  // NEW: Export the display name function
+    getTornadoDescriptions: getTornadoDescriptions,
+    getDisplayName: getDisplayName,
     tryRegisterDataLabels,
     colorForValue,
     roundRect,

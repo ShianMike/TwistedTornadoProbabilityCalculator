@@ -6,11 +6,13 @@
  * 2) extractGeometry: false -> Returns human-readable analysis text
  *
  * RATE LIMITING: Max 30 requests per IP per hour
+ * PAYLOAD LIMIT: Max 10MB body size (base64 images can be large)
  */
 
 const rateLimitMap = new Map();
 const RATE_LIMIT = 30;
 const RATE_WINDOW = 60 * 60 * 1000;
+const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
 function getRateLimitKey(req) {
   return (
@@ -46,12 +48,22 @@ function checkRateLimit(ip) {
 
 /**
  * Vercel Serverless Functions often do NOT auto-parse JSON body for raw /api/*.js.
- * This helper reads and parses JSON safely.
+ * This helper reads and parses JSON safely with size limit enforcement.
  */
 async function readJson(req) {
   return new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", (chunk) => (data += chunk));
+    let size = 0;
+    
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > MAX_PAYLOAD_SIZE) {
+        req.destroy();
+        reject(new Error(`Payload too large. Maximum size is ${Math.round(MAX_PAYLOAD_SIZE / 1024 / 1024)}MB`));
+        return;
+      }
+      data += chunk;
+    });
     req.on("end", () => {
       if (!data) return resolve({});
       try {

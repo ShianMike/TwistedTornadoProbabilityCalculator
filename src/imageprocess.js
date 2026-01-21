@@ -1,4 +1,19 @@
+/**
+ * Image Processing Module
+ * Handles image upload, paste, and OCR extraction
+ */
 let currentImage = null;
+
+// Debug flag - set to true for verbose logging
+const DEBUG = (typeof window.TornadoTypes !== 'undefined' && window.TornadoTypes.DEBUG) || false;
+
+/**
+ * Conditional logging - only logs when DEBUG is true
+ * @param  {...any} args - Arguments to log
+ */
+function debugLog(...args) {
+  if (DEBUG) console.log('[ImageProcess]', ...args);
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('fileInput');
@@ -8,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                console.log('File selected:', file.name);
+                debugLog('File selected:', file.name);
                 loadImage(file);
             }
         });
@@ -22,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (items[i].type.indexOf('image') !== -1) {
                 e.preventDefault();
                 const blob = items[i].getAsFile();
-                console.log('Image pasted from clipboard');
+                debugLog('Image pasted from clipboard');
                 loadImage(blob);
                 break;
             }
@@ -32,14 +47,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Paste from clipboard button function (called from HTML onclick in index.html)
 async function pasteFromClipboard() {
-    console.log('Paste button clicked');
+    debugLog('Paste button clicked');
     try {
         const items = await navigator.clipboard.read();
         for (const item of items) {
             for (const type of item.types) {
                 if (type.startsWith('image/')) {
                     const blob = await item.getType(type);
-                    console.log('Image found in clipboard');
+                    debugLog('Image found in clipboard');
                     loadImage(blob);
                     return;
                 }
@@ -47,18 +62,18 @@ async function pasteFromClipboard() {
         }
         showStatus('No image found in clipboard. Try pressing Ctrl+V instead.', 'error');
     } catch (err) {
-        console.error('Clipboard read error:', err);
+        if (DEBUG) console.error('Clipboard read error:', err);
         showStatus('Clipboard access denied. Please use Ctrl+V to paste.', 'error');
     }
 }
 
 // Load and display image
 function loadImage(file) {
-    console.log('Loading image:', file);
+    debugLog('Loading image:', file);
     const reader = new FileReader();
     reader.onload = function(e) {
         currentImage = e.target.result;
-        console.log('Image loaded successfully');
+        debugLog('Image loaded successfully');
         displayImage(currentImage);
         processImage(currentImage);
     };
@@ -70,9 +85,9 @@ function displayImage(imageSrc) {
     const preview = document.getElementById('preview');
     if (preview) {
         preview.innerHTML = `<img src="${imageSrc}" alt="Weather Data Preview">`;
-        console.log('Image displayed in preview');
+        debugLog('Image displayed in preview');
     } else {
-        console.error('Preview element not found');
+        if (DEBUG) console.error('Preview element not found');
     }
 }
 
@@ -89,13 +104,13 @@ async function processImage(imageSrc) {
                     if (m.status === 'recognizing text') {
                         showStatus(`Processing: ${Math.round(m.progress * 100)}%`, 'processing');
                     }
-                    console.log(m);
+                    debugLog(m);
                 }
             }
         );
 
         const extractedText = result.data.text;
-        console.log('Extracted text:', extractedText);
+        debugLog('Extracted text:', extractedText);
         
         const values = parseWeatherData(extractedText);
         fillFields(values);
@@ -106,7 +121,7 @@ async function processImage(imageSrc) {
             showStatus('No data could be extracted. Try a clearer image.', 'error');
         }
     } catch (error) {
-        console.error('OCR Error:', error);
+        if (DEBUG) console.error('OCR Error:', error);
         showStatus('Error processing image. Please try again.', 'error');
     }
 }
@@ -115,7 +130,7 @@ async function processImage(imageSrc) {
 function parseWeatherData(text) {
     const values = {};
     
-    console.log('Raw extracted text:', text);
+    debugLog('Raw extracted text:', text);
     
     const lines = text.split('\n');
     
@@ -124,14 +139,14 @@ function parseWeatherData(text) {
         
         if (!cleanLine) continue;
         
-        console.log('Processing line:', cleanLine);
+        debugLog('Processing line:', cleanLine);
         
         // TEMPERATURE
         if (/TEMPERATURE/i.test(cleanLine)) {
             const match = cleanLine.match(/TEMPERATURE[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['TEMP'] = match[1];
-                console.log('Found TEMPERATURE:', match[1]);
+                debugLog('Found TEMPERATURE:', match[1]);
             }
         }
         
@@ -140,7 +155,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/DEWPOINT[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['DEWPOINT'] = match[1];
-                console.log('Found DEWPOINT:', match[1]);
+                debugLog('Found DEWPOINT:', match[1]);
             }
         }
         
@@ -149,7 +164,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/3\s*CAPE[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['CAPE_3KM'] = match[1];
-                console.log('Found 3CAPE:', match[1]);
+                debugLog('Found 3CAPE:', match[1]);
             }
         }
         
@@ -158,7 +173,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/(?:^|[^3])\s*CAPE[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['CAPE'] = match[1];
-                console.log('Found CAPE:', match[1]);
+                debugLog('Found CAPE:', match[1]);
             }
         }
         
@@ -167,7 +182,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/0[- ]?3\s*KM\s+LAPSE[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['LAPSE_RATE_0_3'] = match[1];
-                console.log('Found 0-3KM LAPSE:', match[1]);
+                debugLog('Found 0-3KM LAPSE:', match[1]);
             }
         }
         
@@ -176,7 +191,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/3[- ]?6\s*KM\s+LAPSE[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['LAPSE_3_6KM'] = match[1];
-                console.log('Found 3-6KM LAPSE:', match[1]);
+                debugLog('Found 3-6KM LAPSE:', match[1]);
             }
         }
         
@@ -191,7 +206,7 @@ function parseWeatherData(text) {
                 const match = cleanLine.match(/([\d\.]+)\s+IN/i);
                 if (match) {
                     values['PWAT'] = match[1];
-                    console.log('Found PWAT:', match[1]);
+                    debugLog('Found PWAT:', match[1]);
                 }
             }
         }
@@ -201,7 +216,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/\bSRH\b[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['SRH'] = match[1];
-                console.log('Found SRH:', match[1]);
+                debugLog('Found SRH:', match[1]);
             }
         }
         
@@ -210,7 +225,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/SURFACE\s+RH[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['SURFACE_RH'] = match[1];
-                console.log('Found SURFACE RH:', match[1]);
+                debugLog('Found SURFACE RH:', match[1]);
             }
         }
         
@@ -219,7 +234,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/700[- ]?500\s*MB\s+RH[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['RH_MID'] = match[1];
-                console.log('Found 700-500MB RH:', match[1]);
+                debugLog('Found 700-500MB RH:', match[1]);
             }
         }
 
@@ -228,7 +243,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/STORM\s+SPEED[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['STORM_SPEED'] = match[1];
-                console.log('Found STORM SPEED:', match[1]);
+                debugLog('Found STORM SPEED:', match[1]);
             }
         }
 
@@ -237,7 +252,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/\bSTP\b[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['STP'] = match[1];
-                console.log('Found STP:', match[1]);
+                debugLog('Found STP:', match[1]);
             }
         }
         
@@ -246,7 +261,7 @@ function parseWeatherData(text) {
             const match = cleanLine.match(/\bVTP\b[.\s:]*(\d+\.?\d*)/i);
             if (match) {
                 values['VTP'] = match[1];
-                console.log('Found VTP:', match[1]);
+                debugLog('Found VTP:', match[1]);
             }
         }
     }
@@ -256,7 +271,7 @@ function parseWeatherData(text) {
 
 // Fill form fields with extracted values
 function fillFields(values) {
-    console.log('Filling fields with values:', values);
+    debugLog('Filling fields with values:', values);
     
     for (const [fieldId, value] of Object.entries(values)) {
         const input = document.getElementById(fieldId);
@@ -265,12 +280,12 @@ function fillFields(values) {
             input.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
             // Trigger input event for validation
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            console.log(`✓ Filled ${fieldId} with value: ${value}`);
+            debugLog(`✓ Filled ${fieldId} with value: ${value}`);
             setTimeout(() => {
                 input.style.backgroundColor = '';
             }, 2000);
         } else {
-            console.warn(`✗ Input field not found for: ${fieldId}`);
+            debugLog(`✗ Input field not found for: ${fieldId}`);
         }
     }
 }
@@ -291,5 +306,5 @@ function showStatus(message, type) {
         }
     }
     
-    console.log('Status:', message, type);
+    debugLog('Status:', message, type);
 }

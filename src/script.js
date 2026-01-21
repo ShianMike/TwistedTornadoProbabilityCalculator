@@ -5,6 +5,15 @@
 document.addEventListener('DOMContentLoaded', () => {
   
   // ============================================================================
+  // DEBUG FLAG - Uses shared module or fallback
+  // ============================================================================
+  const DEBUG = (window.TornadoTypes && window.TornadoTypes.DEBUG) || false;
+  
+  function debugLog(...args) {
+    if (DEBUG) console.log('[Script]', ...args);
+  }
+
+  // ============================================================================
   // DOM ELEMENT REFERENCES
   // ============================================================================
   
@@ -42,19 +51,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const specialFactorsContainer = document.getElementById('specialFactors');
 
   // ============================================================================
-  // TORNADO TYPE DESCRIPTIONS
+  // TORNADO TYPE DESCRIPTIONS - Use shared module with fallback
   // ============================================================================
   
-  // Detailed descriptions for each tornado morphology type
-  // Used in chart hover tooltips
-  const tornadoDescriptions = {
-    'SIDEWINDER': 'Fast-moving, kinked/elongated hodograph tornado. High storm speed, strong shear, lateral translation.',
-    'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
-    'WEDGE': 'Wide, rain-fed tornado with broad circulation. Driven by low-level moisture and moderate CAPE. Often rain-wrapped and slow-moving.',
-    'DRILLBIT': 'Fast-moving, narrow tornado in dry, linear-shear environment. High storm speed, low moisture.',
-    'CONE': 'Classic mid-range tornado with balanced morphology. Moderately intense with moderate rotation and CAPE.',
-    'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
-  };
+  function getTornadoDescriptions() {
+    return (window.TornadoTypes && window.TornadoTypes.DESCRIPTIONS) || {
+      'SIDEWINDER': 'Fast-moving, kinked/elongated hodograph tornado.',
+      'STOVEPIPE': 'Very narrow, violent tornado with tight core.',
+      'WEDGE': 'Wide, rain-fed tornado with broad circulation.',
+      'DRILLBIT': 'Fast-moving, narrow tornado in dry environment.',
+      'CONE': 'Classic mid-range tornado with balanced morphology.',
+      'ROPE': 'Weak, decaying funnel in low-CAPE environments.'
+    };
+  }
 
   // ============================================================================
   // INPUT READING & VALIDATION
@@ -200,27 +209,27 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {Object} estimate - Wind estimate object with min/max values
    */
   function drawMiniWind(canvas, estimate) {
-    console.log('[MiniWind] Drawing with estimate:', estimate);
+    debugLog('[MiniWind] Drawing with estimate:', estimate);
     
     if (!canvas) {
-      console.error('[MiniWind] Canvas element not found');
+      if (DEBUG) console.error('[MiniWind] Canvas element not found');
       return;
     }
     
     if (!window.ChartRenderer) {
-      console.error('[MiniWind] ChartRenderer module not loaded');
+      if (DEBUG) console.error('[MiniWind] ChartRenderer module not loaded');
       return;
     }
     
     if (!estimate || !estimate.est_max || estimate.est_max === 0) {
-      console.log('[MiniWind] No estimate or zero wind speed, clearing canvas');
+      debugLog('[MiniWind] No estimate or zero wind speed, clearing canvas');
       // Clear the canvas
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
     
-    console.log('[MiniWind] Calling ChartRenderer.drawMiniWind');
+    debugLog('[MiniWind] Calling ChartRenderer.drawMiniWind');
     window.ChartRenderer.drawMiniWind(canvas, estimate);
   }
 
@@ -236,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.ChartRenderer && typeof window.Chart !== 'undefined') {
       window.ChartRenderer.tryRegisterDataLabels();
     } else {
-      console.warn('[Script] ChartRenderer or Chart.js not loaded yet');
+      debugLog('ChartRenderer or Chart.js not loaded yet');
     }
   }
 
@@ -351,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderEmptyProb() {
     // Ensure Chart.js is loaded
     if (typeof Chart === 'undefined') {
-      console.warn('[Script] Chart.js not loaded, delaying empty chart render');
+      debugLog('Chart.js not loaded, delaying empty chart render');
       setTimeout(renderEmptyProb, 100);
       return;
     }
@@ -428,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderProbChart(dataArr) {
     // Ensure Chart.js is loaded
     if (typeof Chart === 'undefined') {
-      console.warn('[Script] Chart.js not loaded, delaying chart render');
+      debugLog('Chart.js not loaded, delaying chart render');
       setTimeout(() => renderProbChart(dataArr), 100);
       return;
     }
@@ -573,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function renderSpecialFactors(factors) {
     if (!specialFactorsContainer) {
-      console.warn('[SpecialFactors] Container not found');
+      debugLog('[SpecialFactors] Container not found');
       return;
     }
     
@@ -792,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check if calculation modules are loaded
     if (!window.TornadoCalculations || !window.ChartRenderer) {
-      console.warn('[Analysis] Required modules not loaded yet, retrying in 500ms...');
+      debugLog('Required modules not loaded yet, retrying in 500ms...');
       setTimeout(() => performAnalysis(), 500);
       return;
     }
@@ -819,12 +828,12 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProbChart(sortedTypes);
     renderSpecialFactors(result.factors);
     
-    console.log('[Analysis] Estimating wind speeds with data:', data);
+    debugLog('[Analysis] Estimating wind speeds with data:', data);
     
     // Estimate wind speeds
     const estimate = window.TornadoCalculations.estimate_wind(data);
     
-    console.log('[Analysis] Wind estimate result:', estimate);
+    debugLog('[Analysis] Wind estimate result:', estimate);
     
     // Draw wind visualization
     if (estimate && estimate.est_max > 0) {
@@ -930,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (analyzeBtn) {
     analyzeBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      console.log('[Analysis] Analyze button clicked');
+      debugLog('Analyze button clicked');
       performAnalysis();
     });
   }
@@ -941,7 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      console.log('[Reset] Reset button clicked');
+      debugLog('Reset button clicked');
       
       // Clear all form inputs
       ids.forEach(k => {
@@ -1011,21 +1020,23 @@ document.addEventListener('DOMContentLoaded', () => {
    * Initialize the application
    */
   function init() {
-    console.log('Twisted Weather Analyzer initialized');
+    debugLog('Twisted Weather Analyzer initialized');
     
     // Load the example image for the tip section
     loadTipExampleImage();
     
     // Check module loading status after delay
-    setTimeout(() => {
-      console.log('Modules loaded:', {
-        TornadoCalculations: !!window.TornadoCalculations,
-        ChartRenderer: !!window.ChartRenderer,
-        InputValidation: !!window.InputValidation,
-        Chart: typeof Chart !== 'undefined',
-        ChartDataLabels: typeof ChartDataLabels !== 'undefined'
-      });
-    }, 1000);
+    if (DEBUG) {
+      setTimeout(() => {
+        console.log('Modules loaded:', {
+          TornadoCalculations: !!window.TornadoCalculations,
+          ChartRenderer: !!window.ChartRenderer,
+          InputValidation: !!window.InputValidation,
+          Chart: typeof Chart !== 'undefined',
+          ChartDataLabels: typeof ChartDataLabels !== 'undefined'
+        });
+      }, 1000);
+    }
   }
 
   /**
@@ -1050,12 +1061,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof Chart !== 'undefined') {
     renderEmptyProb();
   } else {
-    console.log('[Script] Waiting for Chart.js to load...');
+    debugLog('Waiting for Chart.js to load...');
     setTimeout(() => {
       if (typeof Chart !== 'undefined') {
         renderEmptyProb();
       } else {
-        console.error('[Script] Chart.js failed to load after timeout');
+        if (DEBUG) console.error('[Script] Chart.js failed to load after timeout');
       }
     }, 1000);
   }

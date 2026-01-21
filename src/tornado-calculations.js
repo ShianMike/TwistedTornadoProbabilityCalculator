@@ -807,8 +807,8 @@
     let theoretical = null;
     const isExtremeVTP = VTP >= 3;
     const isExtremeSTP = STP >= 11;
-    const isExtremeConditions = CAPE > 7000 && SRH > 700 && LAPSE_RATE_0_3 > 10;  // Raised CAPE threshold
-    const isHighWinds = est_max >= 250;
+    const isExtremeConditions = CAPE > 6000 && SRH > 600;
+    const isHighWinds = est_max >= 230;
     
     if (isHighWinds && (isExtremeVTP || isExtremeSTP || isExtremeConditions)) {
       const theo_min = est_max + 18;  // Increased gap from 15

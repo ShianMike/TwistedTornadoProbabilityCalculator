@@ -877,7 +877,10 @@ RETURN JSON ONLY. No extra text.
    * Integrate metrics with TornadoCalculations via window.HODOGRAPH_DATA
    */
   function integrateWithTornadoCalculations(result) {
-    const { metrics, qc, hazardAnalysis } = result;
+    const { metrics, labels, qc, hazardAnalysis } = result;
+    
+    // Derive HODO_HAS_LOOP from shapeType
+    const hasLoop = labels.shapeType === 'LOOPED';
     
     window.HODOGRAPH_DATA = {
       HODO_CURVATURE: metrics.curvatureIndex,
@@ -886,7 +889,10 @@ RETURN JSON ONLY. No extra text.
       HODO_KINK: metrics.kinkMaxDeg,
       HODO_EXTENSION: metrics.extensionNorm,
       HODO_COMPACTNESS: metrics.compactness,
-      HODO_CONF: qc.confidence
+      HODO_CONF: qc.confidence,
+      // New exports for tornado-calculations.js
+      HODO_SHAPE: labels.shapeType,  // 'STRAIGHT', 'MODERATELY_CURVED', 'STRONGLY_CURVED', 'KINKED', 'LOOPED'
+      HODO_HAS_LOOP: hasLoop
     };
 
     console.log('Hodograph data integrated:', window.HODOGRAPH_DATA);

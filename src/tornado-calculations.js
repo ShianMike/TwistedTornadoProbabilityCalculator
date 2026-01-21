@@ -312,26 +312,8 @@
     if (SRH > 600) scores.SIDEWINDER += 25;
     if (SRH > 800) scores.SIDEWINDER += 15;
     
-    // HODOGRAPH GEOMETRY (when available) - this is the key differentiator
-    if (useHodo) {
-      // Kinked hodograph strongly favors sidewinder
-      if (HODO_SHAPE === 'KINKED') scores.SIDEWINDER += 45;
-      else if (HODO_KINK > 70) scores.SIDEWINDER += 35;
-      else if (HODO_KINK > 50) scores.SIDEWINDER += 20;
-      
-      // Elongated (high extension) + moderate curvature = sidewinder territory
-      if (HODO_EXTENSION > 0.6 && HODO_CURVATURE < 1.3) scores.SIDEWINDER += 25;
-      if (HODO_EXTENSION > 0.7) scores.SIDEWINDER += 15;
-      
-      // Low compactness (spread out hodograph) favors sidewinder
-      if (HODO_COMPACTNESS < 0.5) scores.SIDEWINDER += 20;
-      
-      // Looped hodograph disfavors sidewinder (favors stovepipe/wedge)
-      if (HODO_HAS_LOOP) scores.SIDEWINDER -= 30;
-      
-      // High curvature disfavors sidewinder
-      if (HODO_CURVATURE > 1.4) scores.SIDEWINDER -= 20;
-    }
+    // Note: Hodograph geometry adjustments are now in the unified hodograph block below
+    // This keeps all hodograph logic in one place with proper capping
     
     // Secondary: dry conditions can enhance but aren't required
     if (DEW_SPREAD > 15) scores.SIDEWINDER += 10;
@@ -350,31 +332,74 @@
 
     // ========================================================================
     // HODOGRAPH GEOMETRY ADJUSTMENTS (when confident)
+    // Cap hodograph influence to ±35 per type so thermos still dominate
     // ========================================================================
     if (useHodo) {
-      // High curvature + high compactness = tightly wound = STOVEPIPE/WEDGE
-      if (HODO_CURVATURE > 1.3 && HODO_COMPACTNESS > 0.6) {
-        if (PWAT > 1.6) scores.WEDGE += 25;
-        else scores.STOVEPIPE += 25;
-      }
+      // Helper to clamp hodograph bonus
+      const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val));
       
-      // Low curvature + high extension = linear/elongated = DRILLBIT
-      if (HODO_CURVATURE < 1.15 && HODO_EXTENSION > 0.65) {
-        scores.DRILLBIT += 20;
-        scores.SIDEWINDER += 15;
-      }
+      // --- ROPE: weak/linear shear, poorly organized ---
+      let ropeHodoBonus = 0;
+      if (HODO_EXTENSION < 0.45) ropeHodoBonus += 15;  // Short/weak shear
+      if (HODO_TURNING < 60) ropeHodoBonus += 12;      // Little turning
+      if (HODO_CURVATURE < 1.12 && HODO_KINK < 45) ropeHodoBonus += 10;  // Boring/linear
+      if (HODO_HAS_LOOP || HODO_TURNING > 160) ropeHodoBonus -= 20;  // Too organized
+      scores.ROPE += clamp(ropeHodoBonus, -35, 35);
       
-      // Looped hodograph = strong mesocyclone = STOVEPIPE/WEDGE
-      if (HODO_HAS_LOOP) {
-        scores.STOVEPIPE += 20;
-        scores.WEDGE += 15;
-        scores.ROPE -= 15;
-      }
+      // --- CONE: clean continuous curvature, no extreme loopiness ---
+      let coneHodoBonus = 0;
+      if (HODO_CURVATURE >= 1.15 && HODO_CURVATURE <= 1.35) coneHodoBonus += 15;
+      if (HODO_TURNING >= 100 && HODO_TURNING <= 220) coneHodoBonus += 12;
+      if (HODO_KINK < 60) coneHodoBonus += 8;  // Smooth
+      if (HODO_EXTENSION >= 0.45 && HODO_EXTENSION <= 0.65) coneHodoBonus += 8;
+      if (HODO_HAS_LOOP) coneHodoBonus -= 15;  // Push to stovepipe/wedge
+      if (HODO_KINK > 75) coneHodoBonus -= 12;  // Push to sidewinder
+      if (HODO_EXTENSION > 0.75 && HODO_CURVATURE < 1.2) coneHodoBonus -= 10;  // Push to drillbit/sidewinder
+      scores.CONE += clamp(coneHodoBonus, -35, 35);
       
-      // High total turning without loop = continuous veer = CONE
-      if (HODO_TURNING > 180 && !HODO_HAS_LOOP) {
-        scores.CONE += 15;
-      }
+      // --- STOVEPIPE: strong tight organization (large turning + compact) ---
+      let stovepipeHodoBonus = 0;
+      if (HODO_TURNING > 170) stovepipeHodoBonus += 15;
+      if (HODO_CURVATURE > 1.28) stovepipeHodoBonus += 12;
+      if (HODO_COMPACTNESS > 0.58) stovepipeHodoBonus += 10;  // Tight/packed
+      if (HODO_EXTENSION >= 0.55 && HODO_EXTENSION <= 0.75) stovepipeHodoBonus += 8;
+      if (HODO_HAS_LOOP && PWAT < 1.8) stovepipeHodoBonus += 12;  // Loop + not screaming wedge
+      if (HODO_COMPACTNESS < 0.48) stovepipeHodoBonus -= 15;  // Too spread
+      scores.STOVEPIPE += clamp(stovepipeHodoBonus, -35, 35);
+      
+      // --- WEDGE: extreme organization + big footprint ---
+      let wedgeHodoBonus = 0;
+      if (HODO_HAS_LOOP || HODO_TURNING > 220) wedgeHodoBonus += 15;
+      if (HODO_EXTENSION > 0.65) wedgeHodoBonus += 12;
+      if (HODO_CURVATURE > 1.30) wedgeHodoBonus += 10;
+      if (HODO_COMPACTNESS > 0.55) wedgeHodoBonus += 8;
+      if (HODO_EXTENSION < 0.55) wedgeHodoBonus -= 12;  // Hard to justify big mode
+      if (HODO_KINK > 80) wedgeHodoBonus -= 10;  // Messy → sidewinder
+      scores.WEDGE += clamp(wedgeHodoBonus, -35, 35);
+      
+      // --- DRILLBIT: elongated/linear fast-shear, low curvature ---
+      let drillbitHodoBonus = 0;
+      if (HODO_CURVATURE < 1.18) drillbitHodoBonus += 15;
+      if (HODO_EXTENSION > 0.65) drillbitHodoBonus += 12;
+      if (HODO_TURNING < 120) drillbitHodoBonus += 10;  // Low-moderate turning
+      if (HODO_COMPACTNESS < 0.55) drillbitHodoBonus += 8;  // Spread out
+      if (HODO_HAS_LOOP || HODO_CURVATURE > 1.30) drillbitHodoBonus -= 18;  // Push to organized types
+      // Separation from SIDEWINDER: penalize drillbit when kinked (push to sidewinder)
+      if (HODO_KINK > 60) drillbitHodoBonus -= 15;
+      scores.DRILLBIT += clamp(drillbitHodoBonus, -35, 35);
+      
+      // --- SIDEWINDER: kinked/segmented, fast, not vertically coherent ---
+      let sidewinderHodoBonus = 0;
+      if (HODO_SHAPE === 'KINKED') sidewinderHodoBonus += 25;  // Strong signal
+      else if (HODO_KINK > 70) sidewinderHodoBonus += 20;
+      else if (HODO_KINK > 50) sidewinderHodoBonus += 12;
+      if (HODO_EXTENSION > 0.60 && HODO_CURVATURE < 1.30) sidewinderHodoBonus += 12;
+      if (HODO_COMPACTNESS < 0.52) sidewinderHodoBonus += 10;
+      if (HODO_HAS_LOOP) sidewinderHodoBonus -= 25;  // Push to stovepipe/wedge
+      if (HODO_CURVATURE > 1.40) sidewinderHodoBonus -= 15;  // Too wrapped
+      // Separation from DRILLBIT: sidewinder needs kink OR messy geometry
+      if (HODO_KINK < 40 && HODO_CURVATURE < 1.15) sidewinderHodoBonus -= 10;  // Classic dryline bullet → drillbit
+      scores.SIDEWINDER += clamp(sidewinderHodoBonus, -35, 35);
     }
 
     // ========================================================================
@@ -668,7 +693,7 @@
         est_max: 0,
         label: 'No tornado potential',
         theoretical: null,
-        thermalContribution: 0,
+        baroclinicProxy: 0,
         adjustedWind: 0
       };
     }
@@ -703,7 +728,7 @@
     const adjustedWindRaw = baseWind + BAROCLINIC_GAMMA * baroclinic_mph;
     const adjustedWind = Math.max(0, Math.min(500, adjustedWindRaw));
 
-    const uncertainty = baseWind * 0.15;  // SVM model has tight prediction range
+    const uncertainty = baseWind * 0.15;  // Empirical model uncertainty range
     let est_min = Math.max(50, Math.round(baseWind - uncertainty));
     let est_max = Math.round(baseWind + uncertainty);
     

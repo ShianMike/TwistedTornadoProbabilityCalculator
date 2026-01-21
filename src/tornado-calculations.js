@@ -1,249 +1,127 @@
 /**
  * TORNADO CALCULATIONS MODULE
- * Trained on 48 real tornado events from weather_composite_data.csv
- * UPGRADED: Now uses SVM model (98.52% R² accuracy) instead of Random Forest
+ * Empirical regression model calibrated on tornado event data
+ * Uses weighted feature contributions + hodograph geometry integration
  */
 
 (function() {
   'use strict';
 
   // ========================================================================
-  // SVM MODEL DATA (98.52% R² - BEST MODEL)
+  // EMPIRICAL REGRESSION MODEL
   // ========================================================================
-  // Pre-loaded model data for SVM predictions
-  const SVM_MODEL = {
-    kernel: 'rbf',
-    C: 100,
-    gamma: 0.083333,  // 1/12
-    epsilon: 0.1,
-    intercept: -4.247,
-    support_vectors: [
-      // Will be loaded from tornado_svm_model_export.json or computed on demand
-    ],
-    dual_coefficients: [
-      // Will be loaded from tornado_svm_model_export.json or computed on demand
-    ],
-    scaler_mean: [2985.42, 323.33, 8.19, 1.58, 81.58, 61.67, 1956.67, 7.36, 65.42, 54.58, 47.08, 3.08],
-    scaler_scale: [1895.06, 146.02, 1.05, 0.44, 5.69, 7.46, 1158.97, 1.24, 11.91, 12.64, 15.16, 2.74]
+  // Hand-tuned weights derived from correlation analysis of tornado events
+  // This is NOT a true ML model - it's a rule-based additive regression
+  const EMPIRICAL_MODEL = {
+    // Feature normalization ranges (observed data bounds)
+    normRanges: {
+      CAPE: 7000,
+      SRH: 800,
+      LAPSE_0_3: 12,
+      LAPSE_3_6: 12,
+      CAPE_3KM: 5000,
+      TVS_PEAKS: 8
+    },
+    // Weights calibrated to produce realistic wind estimates
+    weights: {
+      LAPSE_3_6: 44,
+      LAPSE_0_3: 42,
+      SRH: 40,
+      CAPE_3KM: 36,
+      CAPE: 38,
+      TVS_PEAKS: 39
+    },
+    baseWind: 105
   };
 
-  // Feature names in correct order for SVM
-  const SVM_FEATURES = [
-    'CAPE', 'SRH', 'Lapse_0_3km', 'PWAT', 'Temperature', 'Dewpoint',
-    'CAPE_3km', 'Lapse_3_6km', 'Surface_RH', 'RH_700_500', 'Storm_Motion', 'Total_TVS_Peaks'
-  ];
-
   /**
-   * RBF Kernel function for SVM
-   * @param {Array} x1 - First feature vector (scaled)
-   * @param {Array} x2 - Second feature vector (support vector, scaled)
-   * @param {number} gamma - Gamma parameter
-   * @returns {number} Kernel value
-   */
-  function rbfKernel(x1, x2, gamma) {
-    let sumSquares = 0;
-    for (let i = 0; i < x1.length; i++) {
-      const diff = x1[i] - x2[i];
-      sumSquares += diff * diff;
-    }
-    return Math.exp(-gamma * sumSquares);
-  }
-
-  /**
-   * Scale features using mean and scale from training data
-   * @param {Array} features - Raw features
-   * @returns {Array} Scaled features
-   */
-  function scaleFeatures(features) {
-    const scaled = [];
-    for (let i = 0; i < features.length; i++) {
-      scaled.push((features[i] - SVM_MODEL.scaler_mean[i]) / SVM_MODEL.scaler_scale[i]);
-    }
-    return scaled;
-  }
-
-  /**
-   * Predict windspeed using SVM model (98.52% R² accuracy)
+   * Predict windspeed using empirical weighted regression
    * @param {Object} data - Atmospheric data
    * @returns {number} Predicted windspeed in mph
    */
-  function predictWindspeedSVM(data) {
-    // Extract features in correct order
-    const features = [
-      data.CAPE || 0,
-      data.SRH || 0,
-      data.LAPSE_RATE_0_3 || 0,
-      data.PWAT || 0,
-      data.TEMP || 0,
-      data.DEWPOINT || 0,
-      data.CAPE_3KM || 0,
-      data.LAPSE_RATE_3_6 || 0,
-      data.SURFACE_RH || 0,
-      data.RH_MID || 0,
-      data.STORM_SPEED || 0,
-      data.TVS_PEAKS || 0
-    ];
-
-    // Scale features
-    const scaled = scaleFeatures(features);
-
-    // For demonstration, use empirical calculation based on feature correlation
-    // In production, load support vectors from tornado_svm_model_export.json
-    // The following is derived from the model's learned patterns:
+  function predictWindspeedEmpirical(data) {
+    const M = EMPIRICAL_MODEL;
     
-    // Normalized components
-    const capeNorm = Math.min(1.0, (features[0] || 0) / 7000);
-    const srhNorm = Math.min(1.0, (features[1] || 0) / 800);
-    const lapseNorm = Math.min(1.0, (features[2] || 0) / 12);
-    const cape3Norm = Math.min(1.0, (features[6] || 0) / 5000);
-    const lapseHighNorm = Math.min(1.0, (features[7] || 0) / 12);
+    // Normalize features to 0-1 range
+    const capeNorm = Math.min(1.0, (data.CAPE || 0) / M.normRanges.CAPE);
+    const srhNorm = Math.min(1.0, (data.SRH || 0) / M.normRanges.SRH);
+    const lapseNorm = Math.min(1.0, (data.LAPSE_RATE_0_3 || 0) / M.normRanges.LAPSE_0_3);
+    const lapseHighNorm = Math.min(1.0, (data.LAPSE_RATE_3_6 || 0) / M.normRanges.LAPSE_3_6);
+    const cape3Norm = Math.min(1.0, (data.CAPE_3KM || 0) / M.normRanges.CAPE_3KM);
+    const tvsNorm = Math.min(1.0, (data.TVS_PEAKS || 0) / M.normRanges.TVS_PEAKS);
     
-    // SVM-learned relationships (from 0.9886 to 0.9207 correlation features)
-    // Calibrated weights to match observed tornado data (max ~260 mph)
-    // Weighted by correlation strength for realistic stovepipe/wedge/cone estimates
-    // Lapse_3_6km: 0.9886, Lapse_0_3km: 0.9841, SRH: 0.9822, CAPE_3km: 0.9717
-    const lapseHighComponent = lapseHighNorm * 44;   // 0.9886 correlation (+2 mph)
-    const lapseComponent = lapseNorm * 42;           // 0.9841 correlation (+2 mph)
-    const srhComponent = srhNorm * 40;               // 0.9822 correlation (+2 mph)
-    const cape3Component = cape3Norm * 36;           // 0.9717 correlation (+1 mph)
+    // Weighted sum
+    let prediction = M.baseWind;
+    prediction += lapseHighNorm * M.weights.LAPSE_3_6;
+    prediction += lapseNorm * M.weights.LAPSE_0_3;
+    prediction += srhNorm * M.weights.SRH;
+    prediction += cape3Norm * M.weights.CAPE_3KM;
+    prediction += capeNorm * M.weights.CAPE;
+    prediction += tvsNorm * M.weights.TVS_PEAKS;
     
-    // Secondary features
-    const capeComponent = capeNorm * 38;             // 0.9386 correlation (+2 mph)
-    const tvsNorm = Math.min(1.0, (features[11] || 0) / 8);
-    const tvsComponent = tvsNorm * 39;               // 0.9713 correlation (+2 mph)
+    // Apply baroclinic proxy bonus for extreme conditions
+    const baroclinicBonus = computeBaroclinicProxy(data) * 0.15;
+    prediction += baroclinicBonus;
     
-    // Base prediction formula (calibrated to observed tornado speeds ~170-250 mph for high risk)
-    let prediction = 105;  // Base windspeed (+10 mph increase)
-    prediction += lapseHighComponent;
-    prediction += lapseComponent;
-    prediction += srhComponent;
-    prediction += cape3Component;
-    prediction += capeComponent;
-    prediction += tvsComponent;
-    
-    // Apply thermal bonus for extreme conditions
-    const thermalBonus = computeThermalWind_surfaceProxyFromData(data) * 0.15;
-    prediction += thermalBonus;
-    
-    // Ensure prediction is within reasonable bounds
+    // Clamp to reasonable bounds
     return Math.max(50, Math.min(400, prediction));
   }
 
   // ========================================================================
-  // THERMAL WIND PROXY CALCULATIONS
+  // BAROCLINIC FORCING PROXY
   // ========================================================================
+  // NOTE: This is a GAME MECHANIC that estimates forcing strength from
+  // available parameters. It is NOT a physical thermal wind calculation.
+  // Real thermal wind requires actual temperature gradient measurements.
   
-  // Tunable constants
-  const THERMAL_BETA = 1.2;     // maps |∇T| to ΔV proxy
-  const THERMAL_H_EFF_KM = 6;   // effective depth in km
-  const THERMAL_GAMMA = 0.6;    // how strongly ΔV_th maps to tornado winds
-  const FINITE_DELTA_M = 1000;  // finite-difference spacing in meters for surface proxy
+  const BAROCLINIC_BETA = 1.2;     // scaling factor
+  const BAROCLINIC_H_EFF_KM = 6;   // effective depth in km
 
   /**
-   * Estimate temperature gradients from available meteorological data
-   * Used when explicit temperature gradient data is not available
+   * Estimate forcing proxy from available meteorological data
+   * This is a game mechanic, not real physics
    * @param {Object} data - Meteorological data
-   * @returns {Object} Estimated gradients {GRAD_TX, GRAD_TZ} in K/m
+   * @returns {Object} Estimated proxy gradients
    */
-  function estimateThermalGradients(data) {
-    // If gradients already provided, return them
+  function estimateForcingProxy(data) {
+    // If explicit gradients provided, use them
     if (data.GRAD_TX !== undefined && data.GRAD_TZ !== undefined) {
       return { GRAD_TX: data.GRAD_TX, GRAD_TZ: data.GRAD_TZ };
     }
 
-    // Estimate from meteorological parameters
-    // Strong thermal gradients correlate with:
-    // - High dew point spread (dry line situations)
-    // - High storm speed (strong forcing)
-    // - High SRH (baroclinic zones)
-    // - High lapse rate (steep temperature decrease with height)
     const TEMP = data.TEMP || 0;
     const DEWPOINT = data.DEWPOINT || 0;
     const STORM_SPEED = data.STORM_SPEED || 0;
     const SRH = data.SRH || 0;
     const LAPSE_RATE_0_3 = data.LAPSE_RATE_0_3 || 0;
-
     const DEW_SPREAD = Math.max(0, TEMP - DEWPOINT);
 
-    // Base gradient from dew point spread (dry lines create strong gradients)
-    // Typical values: 0.001-0.01 K/m for significant gradients
-    let gradientMagnitude = 0;
+    // Combine indicators of strong forcing
+    let forcingMagnitude = 0;
+    if (DEW_SPREAD > 5) forcingMagnitude += (DEW_SPREAD / 2000);
+    if (STORM_SPEED > 50) forcingMagnitude += ((STORM_SPEED - 50) / 5000);
+    if (SRH > 300) forcingMagnitude += ((SRH - 300) / 50000);
+    if (LAPSE_RATE_0_3 > 8) forcingMagnitude += ((LAPSE_RATE_0_3 - 8) / 1000);
+    forcingMagnitude = Math.min(0.015, forcingMagnitude);
 
-    // Dew spread contribution (0-20°C spread → 0-0.008 K/m)
-    if (DEW_SPREAD > 5) {
-      gradientMagnitude += (DEW_SPREAD / 2000);
-    }
-
-    // Storm speed contribution (faster storms = stronger gradients)
-    if (STORM_SPEED > 50) {
-      gradientMagnitude += ((STORM_SPEED - 50) / 5000);
-    }
-
-    // SRH contribution (higher rotation = baroclinic zone)
-    if (SRH > 300) {
-      gradientMagnitude += ((SRH - 300) / 50000);
-    }
-
-    // Lapse rate contribution (steep lapse = thermal contrast)
-    if (LAPSE_RATE_0_3 > 8) {
-      gradientMagnitude += ((LAPSE_RATE_0_3 - 8) / 1000);
-    }
-
-    // Cap at realistic maximum (0.015 K/m is very strong)
-    gradientMagnitude = Math.min(0.015, gradientMagnitude);
-
-    // Split into x and z components (assume roughly equal, slightly favor x)
-    const GRAD_TX = gradientMagnitude * 0.6;
-    const GRAD_TZ = gradientMagnitude * 0.4;
-
-    return { GRAD_TX, GRAD_TZ };
+    return { GRAD_TX: forcingMagnitude * 0.6, GRAD_TZ: forcingMagnitude * 0.4 };
   }
 
   /**
-   * Surface-proxy finite-difference thermal-wind proxy (returns mph)
+   * Compute baroclinic forcing proxy (returns mph-equivalent)
+   * This is a GAME MECHANIC for estimating atmospheric forcing
    */
-  function computeThermalWind_surfaceProxyFromData(data) {
-    // Accept either explicit neighbor temps in Kelvin or precomputed gradients in K/m
-    const Tcx = data.T_CENTER;
-    const Txp = data.T_XPLUS;
-    const Txm = data.T_XMINUS;
-    const Tzp = data.T_ZPLUS;
-    const Tzm = data.T_ZMINUS;
-
-    if (Tcx === undefined || Txp === undefined || Txm === undefined || Tzp === undefined || Tzm === undefined) {
-      // Try precomputed gradients
-      if (data.GRAD_TX !== undefined && data.GRAD_TZ !== undefined) {
-        const dTx = data.GRAD_TX; // K/m
-        const dTz = data.GRAD_TZ; // K/m
-        const gradKperm = Math.sqrt(dTx * dTx + dTz * dTz);
-        const gradKperkm = gradKperm * 1000.0;
-        const dV_ms = THERMAL_BETA * THERMAL_H_EFF_KM * gradKperkm;
-        return dV_ms * 2.23694;
-      }
-      
-      // Estimate gradients from available data
-      const estimated = estimateThermalGradients(data);
-      const dTx = estimated.GRAD_TX;
-      const dTz = estimated.GRAD_TZ;
-      const gradKperm = Math.sqrt(dTx * dTx + dTz * dTz);
-      const gradKperkm = gradKperm * 1000.0;
-      const dV_ms = THERMAL_BETA * THERMAL_H_EFF_KM * gradKperkm;
-      return dV_ms * 2.23694;
-    }
-
-    // finite differences (K/m)
-    const dTx = (Txp - Txm) / (2 * FINITE_DELTA_M);
-    const dTz = (Tzp - Tzm) / (2 * FINITE_DELTA_M);
-    const gradKperm = Math.sqrt(dTx * dTx + dTz * dTz); // K/m
-    const gradKperkm = gradKperm * 1000.0;               // K/km
-    const dV_ms = THERMAL_BETA * THERMAL_H_EFF_KM * gradKperkm;
-    return dV_ms * 2.23694; // mph
+  function computeBaroclinicProxy(data) {
+    const estimated = estimateForcingProxy(data);
+    const gradMag = Math.sqrt(estimated.GRAD_TX ** 2 + estimated.GRAD_TZ ** 2);
+    const gradKperkm = gradMag * 1000.0;
+    const dV_ms = BAROCLINIC_BETA * BAROCLINIC_H_EFF_KM * gradKperkm;
+    return dV_ms * 2.23694; // convert to mph
   }
 
   /**
    * Calculate tornado morphology probabilities
-   * TRAINED ON ACTUAL GAME DATA - 32 tornado events
-   * NOW INCLUDES THERMAL WIND CONTRIBUTION
+   * Uses atmospheric parameters + hodograph geometry when available
    */
   function calculate_probabilities(data) {
     // Extract atmospheric parameters with defaults
@@ -275,9 +153,26 @@
     const DEW_SPREAD = Math.max(0, TEMP - DEWPOINT);
 
     // ========================================================================
-    // COMPUTE THERMAL WIND CONTRIBUTION (BEFORE SCORING)
+    // HODOGRAPH GEOMETRY INTEGRATION
     // ========================================================================
-    const thermal_mph = computeThermalWind_surfaceProxyFromData(data);
+    // Read hodograph metrics from global state if available and confident
+    const hodo = window.HODOGRAPH_DATA || {};
+    const hodoConf = hodo.HODO_CONF || 0;
+    const useHodo = hodoConf >= 0.6; // Only trust hodograph data if confidence >= 60%
+    
+    const HODO_CURVATURE = useHodo ? (hodo.HODO_CURVATURE || 1.0) : 1.0;
+    const HODO_TURNING = useHodo ? (hodo.HODO_TURNING || 0) : 0;
+    const HODO_NET_TURNING = useHodo ? (hodo.HODO_NET_TURNING || 0) : 0;
+    const HODO_KINK = useHodo ? (hodo.HODO_KINK || 0) : 0;
+    const HODO_EXTENSION = useHodo ? (hodo.HODO_EXTENSION || 0.5) : 0.5;
+    const HODO_COMPACTNESS = useHodo ? (hodo.HODO_COMPACTNESS || 0.5) : 0.5;
+    const HODO_SHAPE = useHodo ? (hodo.HODO_SHAPE || '') : '';
+    const HODO_HAS_LOOP = useHodo ? (hodo.HODO_HAS_LOOP || false) : false;
+
+    // ========================================================================
+    // COMPUTE BAROCLINIC FORCING PROXY
+    // ========================================================================
+    const baroclinic_mph = computeBaroclinicProxy(data);
 
     let scores = {
       ROPE: 0,              // Thin, weak tornadoes
@@ -403,42 +298,99 @@
     // Dry + high instability/rotation (like your scenario)
     if (PWAT < 0.5 && CAPE > 4000 && SRH > 500) scores.DRILLBIT += 30;
 
-    // SIDEWINDER TORNADOES: Rotational, narrow tornadoes in cold/dry environments
-    // Characteristics: Strong rotation, low temperatures, dry air, fast motion
-    // Common in cold air outbreaks with strong dynamics
-    if (TEMP < 60) scores.SIDEWINDER += 25;          // Cold temperatures
-    if (TEMP < 45) scores.SIDEWINDER += 20;          // Very cold
-    if (TEMP < 30) scores.SIDEWINDER += 15;          // Extremely cold
-    if (DEW_SPREAD > 20) scores.SIDEWINDER += 30;    // Very dry air
-    if (DEW_SPREAD > 30) scores.SIDEWINDER += 20;    // Extremely dry
-    if (SRH > 400) scores.SIDEWINDER += 35;          // Strong rotation essential
+    // SIDEWINDER TORNADOES: Fast-moving, kinked/elongated hodograph, lateral translation
+    // Characteristics: High storm speed, kinked hodograph, strong shear, poor vertical coherence
+    // NOT temperature-dependent - can occur in warm environments with right kinematics
+    
+    // Primary driver: FAST STORM MOTION
+    if (STORM_SPEED > 55) scores.SIDEWINDER += 30;
+    if (STORM_SPEED > 70) scores.SIDEWINDER += 25;
+    if (STORM_SPEED > 85) scores.SIDEWINDER += 20;
+    
+    // Primary driver: STRONG SHEAR/ROTATION
+    if (SRH > 400) scores.SIDEWINDER += 30;
     if (SRH > 600) scores.SIDEWINDER += 25;
-    if (STORM_SPEED > 60) scores.SIDEWINDER += 20;   // Fast-moving
-    if (STORM_SPEED > 80) scores.SIDEWINDER += 15;
-    if (LAPSE_RATE_0_3 > 8) scores.SIDEWINDER += 20; // Steep lapse rates
-    if (VTP > 5) scores.SIDEWINDER += 20;            // Moderate-strong rotation
-    if (SURFACE_RH < 50) scores.SIDEWINDER += 15;    // Dry surface
-    // Cold + dry + fast combination
-    if (TEMP < 50 && DEW_SPREAD > 15 && STORM_SPEED > 70) scores.SIDEWINDER += 30;
-    // Penalty for warm/moist conditions
-    if (TEMP > 70) scores.SIDEWINDER -= 25;
-    if (PWAT > 1.5) scores.SIDEWINDER -= 20;
+    if (SRH > 800) scores.SIDEWINDER += 15;
+    
+    // HODOGRAPH GEOMETRY (when available) - this is the key differentiator
+    if (useHodo) {
+      // Kinked hodograph strongly favors sidewinder
+      if (HODO_SHAPE === 'KINKED') scores.SIDEWINDER += 45;
+      else if (HODO_KINK > 70) scores.SIDEWINDER += 35;
+      else if (HODO_KINK > 50) scores.SIDEWINDER += 20;
+      
+      // Elongated (high extension) + moderate curvature = sidewinder territory
+      if (HODO_EXTENSION > 0.6 && HODO_CURVATURE < 1.3) scores.SIDEWINDER += 25;
+      if (HODO_EXTENSION > 0.7) scores.SIDEWINDER += 15;
+      
+      // Low compactness (spread out hodograph) favors sidewinder
+      if (HODO_COMPACTNESS < 0.5) scores.SIDEWINDER += 20;
+      
+      // Looped hodograph disfavors sidewinder (favors stovepipe/wedge)
+      if (HODO_HAS_LOOP) scores.SIDEWINDER -= 30;
+      
+      // High curvature disfavors sidewinder
+      if (HODO_CURVATURE > 1.4) scores.SIDEWINDER -= 20;
+    }
+    
+    // Secondary: dry conditions can enhance but aren't required
+    if (DEW_SPREAD > 15) scores.SIDEWINDER += 10;
+    if (SURFACE_RH < 55) scores.SIDEWINDER += 10;
+    
+    // Moderate instability sweet spot (not too weak, not wedge-extreme)
+    if (VTP > 4 && VTP < 10) scores.SIDEWINDER += 15;
+    
+    // Fast + high shear combination
+    if (STORM_SPEED > 65 && SRH > 500) scores.SIDEWINDER += 20;
+    
+    // Penalty for slow-moving storms (favors other types)
+    if (STORM_SPEED < 40) scores.SIDEWINDER -= 30;
+    // Penalty for excessive moisture (favors wedge)
+    if (PWAT > 2.0) scores.SIDEWINDER -= 15;
 
     // ========================================================================
-    // THERMAL WIND BONUS RULES
-    // Add after all existing scoring blocks, before cross-penalties
+    // HODOGRAPH GEOMETRY ADJUSTMENTS (when confident)
+    // ========================================================================
+    if (useHodo) {
+      // High curvature + high compactness = tightly wound = STOVEPIPE/WEDGE
+      if (HODO_CURVATURE > 1.3 && HODO_COMPACTNESS > 0.6) {
+        if (PWAT > 1.6) scores.WEDGE += 25;
+        else scores.STOVEPIPE += 25;
+      }
+      
+      // Low curvature + high extension = linear/elongated = DRILLBIT
+      if (HODO_CURVATURE < 1.15 && HODO_EXTENSION > 0.65) {
+        scores.DRILLBIT += 20;
+        scores.SIDEWINDER += 15;
+      }
+      
+      // Looped hodograph = strong mesocyclone = STOVEPIPE/WEDGE
+      if (HODO_HAS_LOOP) {
+        scores.STOVEPIPE += 20;
+        scores.WEDGE += 15;
+        scores.ROPE -= 15;
+      }
+      
+      // High total turning without loop = continuous veer = CONE
+      if (HODO_TURNING > 180 && !HODO_HAS_LOOP) {
+        scores.CONE += 15;
+      }
+    }
+
+    // ========================================================================
+    // BAROCLINIC FORCING PROXY ADJUSTMENTS
     // ========================================================================
     
-    // Strong thermal gradient favors violent, narrow tornadoes
-    if (thermal_mph > 30) {
+    // Strong forcing favors violent, narrow tornadoes
+    if (baroclinic_mph > 30) {
       scores.STOVEPIPE += 25;
       scores.SIDEWINDER += 15;
-    } else if (thermal_mph > 15) {
+    } else if (baroclinic_mph > 15) {
       scores.STOVEPIPE += 15;
       scores.CONE += 10;
       scores.SIDEWINDER += 10;
-    } else if (thermal_mph < 6) {
-      // Weak thermal gradient favors wider, moisture-driven tornadoes
+    } else if (baroclinic_mph < 6) {
+      // Weak forcing favors wider, moisture-driven tornadoes
       scores.WEDGE += 15;
       scores.ROPE += 8;
     }
@@ -492,39 +444,38 @@
     }
 
     // ========================================================================
-    // NORMALIZE PROBABILITIES
+    // NORMALIZE PROBABILITIES (Largest Remainder Method for exact 100% sum)
     // ========================================================================
-    const totalScore = Object.values(scores).reduce((sum, val) => Math.max(0, sum + val), 0);
+    const totalScore = Object.values(scores).reduce((sum, val) => sum + Math.max(0, val), 0);
     
     let probabilities = {};
     if (totalScore > 0) {
-      Object.keys(scores).forEach(type => {
-        probabilities[type] = Math.max(0, Math.round((Math.max(0, scores[type]) / totalScore) * 100));
+      // Calculate raw fractions and floor values
+      const types = Object.keys(scores);
+      const rawFractions = types.map(type => {
+        const frac = (Math.max(0, scores[type]) / totalScore) * 100;
+        return { type, frac, floor: Math.floor(frac), remainder: frac - Math.floor(frac) };
       });
+      
+      // Assign floor values first
+      rawFractions.forEach(item => {
+        probabilities[item.type] = item.floor;
+      });
+      
+      // Distribute remainder to largest fractional parts
+      let remaining = 100 - rawFractions.reduce((sum, item) => sum + item.floor, 0);
+      rawFractions.sort((a, b) => b.remainder - a.remainder);
+      for (let i = 0; i < remaining && i < rawFractions.length; i++) {
+        probabilities[rawFractions[i].type]++;
+      }
     } else {
-      // If all scores are negative/zero, determine based on conditions rather than defaults
+      // Fallback when all scores are zero/negative
       const isExtreme = (CAPE > 5000 && SRH > 400) || STP > 15 || VTP > 5;
       
       if (isExtreme) {
-        // Extreme conditions - favor strong tornado types, but give ROPE a baseline
-        probabilities = {
-          ROPE: 10,
-          CONE: 28,
-          STOVEPIPE: 24,
-          WEDGE: 24,
-          DRILLBIT: 10,
-          SIDEWINDER: 4
-        };
+        probabilities = { ROPE: 10, CONE: 28, STOVEPIPE: 24, WEDGE: 24, DRILLBIT: 10, SIDEWINDER: 4 };
       } else {
-        // Marginal conditions
-        probabilities = {
-          ROPE: 25,
-          CONE: 20,
-          STOVEPIPE: 15,
-          WEDGE: 20,
-          DRILLBIT: 12,
-          SIDEWINDER: 8
-        };
+        probabilities = { ROPE: 25, CONE: 20, STOVEPIPE: 15, WEDGE: 20, DRILLBIT: 12, SIDEWINDER: 8 };
       }
     }
 
@@ -649,14 +600,13 @@
         STP: Math.round(STP).toString(),
         VTP: Math.round(VTP).toString()
       },
-      thermalContribution: Math.round(thermal_mph * 10) / 10
+      baroclinicProxy: Math.round(baroclinic_mph * 10) / 10,
+      hodographUsed: useHodo
     };
   }
 
   /**
-   * Estimate tornado wind speeds using machine learning from game data
-   * Trained on 32 real tornado events from weather_composite_data.csv
-   * NOW INCLUDES THERMAL WIND ADJUSTMENT
+   * Estimate tornado wind speeds using empirical regression
    * 
    * ⚡ PEAK WIND SPEED GUIDE ⚡
    * ============================================================================
@@ -677,11 +627,10 @@
    *   - Different tornado morphologies reach peak at different heights/times
    *
    * Model Details:
-   *   - SVM with RBF kernel: 98.52% R² accuracy
-   *   - Trained on real tornado atmospheric conditions
+   *   - Empirical weighted regression calibrated on tornado event data
    *   - Features: CAPE, SRH, lapse rates, PWAT, moisture, TVS, storm dynamics
    *   - Range: 50-400 mph depending on atmospheric input
-   *   - Includes thermal wind contribution for extreme instability scenarios
+   *   - Includes baroclinic forcing proxy for extreme instability scenarios
    * ============================================================================
    */
   function estimate_wind(data) {
@@ -725,13 +674,11 @@
     }
 
     // ========================================================================
-    // MACHINE LEARNING WINDSPEED PREDICTION (SVM - 98.52% R² ACCURACY)
-    // Upgraded from Random Forest (<45% accuracy) to SVM (98.52% accuracy)
-    // Features: All 12 atmospheric parameters with strong correlations (0.92+)
-    // Training: 48 real tornado events with cross-validation (96.73% ± 3.47%)
+    // EMPIRICAL WINDSPEED PREDICTION
+    // Weighted regression calibrated on tornado event data
     // ========================================================================
     
-    const baseWind = predictWindspeedSVM({
+    const baseWind = predictWindspeedEmpirical({
       CAPE: CAPE,
       SRH: SRH,
       LAPSE_RATE_0_3: LAPSE_RATE_0_3,
@@ -747,13 +694,13 @@
     });
     
     // ========================================================================
-    // THERMAL WIND ADJUSTMENT
+    // BAROCLINIC FORCING ADJUSTMENT
     // ========================================================================
-    const thermal_mph = computeThermalWind_surfaceProxyFromData(data);
+    const baroclinic_mph = computeBaroclinicProxy(data);
     
-    // Apply thermal wind contribution
-    const THERMAL_GAMMA_ADJUSTED = 0.6;
-    const adjustedWindRaw = baseWind + THERMAL_GAMMA_ADJUSTED * thermal_mph;
+    // Apply baroclinic proxy contribution
+    const BAROCLINIC_GAMMA = 0.6;
+    const adjustedWindRaw = baseWind + BAROCLINIC_GAMMA * baroclinic_mph;
     const adjustedWind = Math.max(0, Math.min(500, adjustedWindRaw));
 
     const uncertainty = baseWind * 0.15;  // SVM model has tight prediction range
@@ -857,7 +804,7 @@
       label: efLabel,
       efScale: efScale,
       theoretical: theoretical,
-      thermalContribution: Math.round(thermal_mph * 10) / 10,
+      baroclinicProxy: Math.round(baroclinic_mph * 10) / 10,
       adjustedWind: Math.round(adjustedWind)
     };
   }
@@ -937,8 +884,8 @@
     calculate_probabilities: calculate_probabilities,
     estimate_wind: estimate_wind,
     calculate_risk_level: calculate_risk_level,
-    computeThermalWind_surfaceProxyFromData: computeThermalWind_surfaceProxyFromData,
-    predictWindspeedSVM: predictWindspeedSVM
+    computeBaroclinicProxy: computeBaroclinicProxy,
+    predictWindspeedEmpirical: predictWindspeedEmpirical
   };
 
 })();

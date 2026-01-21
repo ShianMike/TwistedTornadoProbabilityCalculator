@@ -288,24 +288,68 @@ RETURN JSON ONLY. No extra text.
   // ========================================================================
 
   /**
-   * Check if two line segments intersect
+   * Robust segment intersection (includes colinear overlap)
    */
   function segmentsIntersect(a, b, c, d) {
-    function ccw(p1, p2, p3) {
-      return (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+    const eps = 1e-10;
+
+    function orient(p, q, r) {
+      const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if (Math.abs(val) < eps) return 0;   // colinear
+      return val > 0 ? 1 : 2;              // 1 = clockwise, 2 = counterclockwise
     }
-    return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
+
+    function onSegment(p, q, r) {
+      // q lies on segment pr
+      return (
+        q.x <= Math.max(p.x, r.x) + eps &&
+        q.x >= Math.min(p.x, r.x) - eps &&
+        q.y <= Math.max(p.y, r.y) + eps &&
+        q.y >= Math.min(p.y, r.y) - eps
+      );
+    }
+
+    const o1 = orient(a, b, c);
+    const o2 = orient(a, b, d);
+    const o3 = orient(c, d, a);
+    const o4 = orient(c, d, b);
+
+    // General case
+    if (o1 !== o2 && o3 !== o4) return true;
+
+    // Special cases (colinear)
+    if (o1 === 0 && onSegment(a, c, b)) return true;
+    if (o2 === 0 && onSegment(a, d, b)) return true;
+    if (o3 === 0 && onSegment(c, a, d)) return true;
+    if (o4 === 0 && onSegment(c, b, d)) return true;
+
+    return false;
   }
 
   /**
-   * Detect if polyline crosses itself
+   * Detect if polyline crosses itself (true cross, not endpoint touch)
    */
   function hasSelfIntersection(points) {
+    const eps = 1e-4; // endpoint proximity threshold
+
+    function close(p, q) {
+      const dx = p.x - q.x, dy = p.y - q.y;
+      return (dx * dx + dy * dy) < eps * eps;
+    }
+
     for (let i = 0; i < points.length - 3; i++) {
+      const a = points[i], b = points[i + 1];
       for (let j = i + 2; j < points.length - 1; j++) {
         // Skip adjacent segments sharing a point
         if (j === i + 1) continue;
-        if (segmentsIntersect(points[i], points[i + 1], points[j], points[j + 1])) return true;
+
+        const c = points[j], d = points[j + 1];
+
+        if (segmentsIntersect(a, b, c, d)) {
+          // Ignore "touching at endpoints" artifacts
+          if (close(a, c) || close(a, d) || close(b, c) || close(b, d)) continue;
+          return true;
+        }
       }
     }
     return false;
@@ -433,8 +477,8 @@ RETURN JSON ONLY. No extra text.
     else if (curvatureIndex > 1.25) shapeType = 'STRONGLY_CURVED';
     else shapeType = 'MODERATELY_CURVED';
 
-    // Kink-dominant override: sharp kink + moderate curvature + not excessive turning
-    const kinkDominant = kinkMaxDeg > 70 && curvatureIndex > 1.4 && turningDeg < 220 && !hasLoop;
+    // Kink-dominant override: sharp kink + moderate curvature (not extreme) + not excessive turning
+    const kinkDominant = kinkMaxDeg > 70 && curvatureIndex >= 1.15 && curvatureIndex <= 1.35 && turningDeg < 220 && !hasLoop;
     if (kinkDominant) shapeType = 'KINKED';
 
     // Low-level curvature (first 35% of filtered points, min 6 for stability)
@@ -467,7 +511,8 @@ RETURN JSON ONLY. No extra text.
         compactness: Math.round(compactness * 100) / 100
       },
       labels: { shapeType, lowLevelCurvature, stormModeHint },
-      qc: { confidence: geometry.confidence || 0.5, warnings: qcWarnings }
+      qc: { confidence: geometry.confidence || 0.5, warnings: qcWarnings },
+      derived: { hasLoop, windingDeg: Math.round(wind) }
     };
   }
 
@@ -877,10 +922,10 @@ RETURN JSON ONLY. No extra text.
    * Integrate metrics with TornadoCalculations via window.HODOGRAPH_DATA
    */
   function integrateWithTornadoCalculations(result) {
-    const { metrics, labels, qc, hazardAnalysis } = result;
+    const { metrics, labels, qc, hazardAnalysis, derived } = result;
     
-    // Derive HODO_HAS_LOOP from shapeType
-    const hasLoop = labels.shapeType === 'LOOPED';
+    // Use computed hasLoop from derived (more accurate than re-deriving from shapeType)
+    const hasLoop = !!(derived && derived.hasLoop);
     
     window.HODOGRAPH_DATA = {
       HODO_CURVATURE: metrics.curvatureIndex,
@@ -890,9 +935,11 @@ RETURN JSON ONLY. No extra text.
       HODO_EXTENSION: metrics.extensionNorm,
       HODO_COMPACTNESS: metrics.compactness,
       HODO_CONF: qc.confidence,
-      // New exports for tornado-calculations.js
+      // Exports for tornado-calculations.js
       HODO_SHAPE: labels.shapeType,  // 'STRAIGHT', 'MODERATELY_CURVED', 'STRONGLY_CURVED', 'KINKED', 'LOOPED'
-      HODO_HAS_LOOP: hasLoop
+      HODO_HAS_LOOP: hasLoop,
+      // Debug/diagnostics
+      HODO_WINDING: derived?.windingDeg || 0
     };
 
     console.log('Hodograph data integrated:', window.HODOGRAPH_DATA);

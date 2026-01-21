@@ -341,6 +341,16 @@ RETURN JSON ONLY. No extra text.
   // ========================================================================
 
   /**
+   * Remove points too close to origin (prevents artificial kinks from calm-wind detour)
+   */
+  function removeNearOrigin(points, origin, eps = 0.02) {
+    if (!origin || points.length < 3) return points;
+    const filtered = points.filter(p => distance(p, origin) > eps);
+    // Ensure we keep at least 2 points
+    return filtered.length >= 2 ? filtered : points;
+  }
+
+  /**
    * Normalize radius by max possible distance to image edge
    */
   function normalizeRadius(r, origin) {
@@ -400,12 +410,15 @@ RETURN JSON ONLY. No extra text.
     // 2) Uniformize sampling (important for angle metrics)
     points = resampleByArcLength(points, Math.min(21, Math.max(12, points.length)));
 
-    // Compute metrics on cleaned points
+    // 3) Remove origin-proximal points (prevents artificial kinks from calm-wind detour)
+    const pointsForAngles = removeNearOrigin(points, origin, 0.02);
+
+    // Compute metrics - use filtered points for angle-based metrics
     const curvatureIndex = calculateCurvatureIndex(points);
-    const turning = calculateTurning(points);
+    const turning = calculateTurning(pointsForAngles);
     const turningDeg = turning.absolute;
     const netTurningDeg = turning.net;
-    const kinkMaxDeg = calculateKinkMaxDeg(points);
+    const kinkMaxDeg = calculateKinkMaxDeg(pointsForAngles);
     const extensionNorm = calculateExtensionNorm(points, origin);
     const compactness = calculateCompactness(points, origin);
 
@@ -420,9 +433,9 @@ RETURN JSON ONLY. No extra text.
     else if (curvatureIndex > 1.25) shapeType = 'STRONGLY_CURVED';
     else shapeType = 'MODERATELY_CURVED';
 
-    // Low-level curvature (first 35% of points, min 6 for stability)
+    // Low-level curvature (first 35% of filtered points, min 6 for stability)
     let lowLevelCurvature = 'MODERATE';
-    const lowLevelPoints = points.slice(0, Math.max(6, Math.floor(points.length * 0.35)));
+    const lowLevelPoints = pointsForAngles.slice(0, Math.max(6, Math.floor(pointsForAngles.length * 0.35)));
     const llTurning = calculateTurning(lowLevelPoints);
     if (llTurning.absolute > 60) lowLevelCurvature = 'STRONG';
     else if (llTurning.absolute < 20) lowLevelCurvature = 'WEAK';
@@ -833,8 +846,15 @@ RETURN JSON ONLY. No extra text.
           <div style="color: #888; font-size: 11px; margin-top: 2px;">
             ${qc.confidence >= 0.6 ? 'Metrics will affect tornado predictions' : 'Too low for predictions'}
           </div>
-          ${qc.warnings.length > 0 ? `<div style="color: #ff6600; font-size: 11px; margin-top: 4px;">Warnings: ${qc.warnings.join(', ')}</div>` : ''}
         </div>
+        ${qc.warnings.length > 0 ? `
+        <div style="background: rgba(255,150,0,0.08); border: 1px solid rgba(255,150,0,0.25); border-radius: 4px; padding: 8px; margin-top: 8px;">
+          <div style="color: #ffaa00; font-weight: bold; font-size: 11px; margin-bottom: 6px;">⚠️ WARNINGS (${qc.warnings.length})</div>
+          <ul style="margin: 0; padding-left: 16px; color: #888; font-size: 10px; line-height: 1.5;">
+            ${qc.warnings.map(w => `<li style="margin-bottom: 3px;">${w}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
       </div>
     `;
     resultsDiv.style.display = 'block';

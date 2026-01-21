@@ -1,10 +1,12 @@
-# Python training and model files (not needed for production)
-*.py
+# Python training files (moved to training/ folder)
+training/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+
+# Model training data (not needed for production)
 models/
 data/*.csv
 
@@ -14,9 +16,6 @@ data/*.csv
 .git/
 .gitignore
 .vscode/
-
-# Requirements file (Python only)
-requirements.txt
 
 # Log and environment files
 *.log

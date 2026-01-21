@@ -17,9 +17,8 @@
     'CONE': 'Classic tornado funnel shape. Balanced atmospheric conditions with moderate instability and rotation.',
     'STOVEPIPE': 'Cylindrical, strong tornado (stovepipe shape). High instability, strong rotation, steep lapse rates.',
     'WEDGE': 'Very wide tornado, often violent (>0.5 mile wide). High moisture, slow storm motion, extreme conditions.',
-    'FUNNEL': 'Funnel cloud with brief ground contact. Moderate rotation, transient touchdowns, fast-moving systems.',
-    'DRILLBIT': 'Fast-moving, narrow tornado in dry environment. High storm speed, low moisture, dry line conditions.',
-    'SIDEWINDER': 'Rotational narrow tornado in cold/dry environments. Strong rotation, low temperature, dry air.'
+    'DRILLBIT': 'Fast-moving, narrow tornado in dry, linear-shear environment. High storm speed, low moisture.',
+    'SIDEWINDER': 'Fast-moving, kinked/elongated hodograph tornado. High storm speed, strong shear, lateral translation.'
   };
 
   // ============================================================================
@@ -35,7 +34,6 @@
     'CONE': 'CONE', 
     'STOVEPIPE': 'STOVEPIPE',
     'WEDGE': 'WEDGE',
-    'FUNNEL': 'FUNNEL',
     'DRILLBIT': 'DRILLBIT',
     'SIDEWINDER': 'SIDEWINDER'
   };
@@ -303,18 +301,18 @@
     ctx.textAlign = 'center';
     ctx.fillText(`${estimate.est_max}`, maxPos, 2);
 
-    // Add thermal wind indicator if present and significant
-    if (estimate.thermalContribution && estimate.thermalContribution > 5) {
+    // Add baroclinic forcing indicator if present and significant
+    if (estimate.baroclinicProxy && estimate.baroclinicProxy > 5) {
       ctx.font = '500 9px Inter, sans-serif'; // Increased by 2px
       ctx.fillStyle = '#fbbf24'; // Yellow indicator
       ctx.textAlign = 'center';
-      const THERMAL_GAMMA_ADJUSTED = 0.6;
-      const thermalText = `+${Math.round(estimate.thermalContribution * THERMAL_GAMMA_ADJUSTED)}th`;
+      const BAROCLINIC_GAMMA = 0.6;
+      const baroclinicText = `+${Math.round(estimate.baroclinicProxy * BAROCLINIC_GAMMA)}bf`;
       
       // Position on right side if space allows
       if (displayWidth > 400) {
         ctx.textAlign = 'right';
-        ctx.fillText(thermalText, displayWidth - 5, 1);
+        ctx.fillText(baroclinicText, displayWidth - 5, 1);
       }
     }
 

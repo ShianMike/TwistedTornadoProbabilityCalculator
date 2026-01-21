@@ -48,13 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Detailed descriptions for each tornado morphology type
   // Used in chart hover tooltips
   const tornadoDescriptions = {
-    'SIDEWINDER': 'Rotational, narrow tornado often with long track. Dominated by strong low-level rotation (SRH) and storm speed.',
+    'SIDEWINDER': 'Fast-moving, kinked/elongated hodograph tornado. High storm speed, strong shear, lateral translation.',
     'STOVEPIPE': 'Very narrow, violent tornado with tight core. Requires extreme instability and high VTP. Rare but potentially intense.',
     'WEDGE': 'Wide, rain-fed tornado with broad circulation. Driven by low-level moisture and moderate CAPE. Often rain-wrapped and slow-moving.',
-    'DRILLBIT': 'Thin, tight tornado in dry, fast-moving storms. Often associated with high storm speed and low-level drying.',
+    'DRILLBIT': 'Fast-moving, narrow tornado in dry, linear-shear environment. High storm speed, low moisture.',
     'CONE': 'Classic mid-range tornado with balanced morphology. Moderately intense with moderate rotation and CAPE.',
-    'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.',
-    'FUNNEL': 'Funnel cloud with rotation aloft that may not consistently touch ground. Common in fast-moving systems with moderate instability. Often creates dust whirls and debris clouds when briefly touching down.'
+    'ROPE': 'Weak, decaying funnel typically in low-CAPE or weakening environments. Often thin and elongated.'
   };
 
   // ============================================================================

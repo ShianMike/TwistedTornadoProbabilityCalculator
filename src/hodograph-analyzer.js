@@ -800,33 +800,33 @@ RETURN JSON ONLY. No extra text.
         <h4 style="margin: 0 0 10px 0; color: #00c8ff; border-bottom: 1px solid #333; padding-bottom: 5px;">SHAPE METRICS</h4>
         
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
-          <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 4px 0; color: #888;">Curvature Index</td>
+          <tr style="border-bottom: 1px solid #333;" title="Arc length divided by chord length. Higher values indicate more curved hodographs. >1.25 suggests significant curvature favorable for rotation.">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Curvature Index</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.curvatureIndex.toFixed(2)}</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.curvatureIndex >= 1.25 ? '#00ff88' : metrics.curvatureIndex <= 1.10 ? '#ffaa00' : '#888'}; font-size: 11px;">${metrics.curvatureIndex >= 1.25 ? 'Strong curve' : metrics.curvatureIndex <= 1.10 ? 'Straight' : 'Moderate'}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 4px 0; color: #888;">Total Turning</td>
+          <tr style="border-bottom: 1px solid #333;" title="Sum of all heading changes along the hodograph trace. Higher values indicate more directional wind shear with height. >90° suggests strong veering/backing.">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Total Turning</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.turningDeg}°</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.turningDeg >= 90 ? '#00ff88' : '#888'}; font-size: 11px;">${metrics.turningDeg >= 90 ? 'High rotation' : metrics.turningDeg >= 45 ? 'Moderate' : 'Low'}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 4px 0; color: #888;">Net Turning</td>
+          <tr style="border-bottom: 1px solid #333;" title="Signed rotation direction. Positive = clockwise (veering with height, typical for supercells). Negative = counter-clockwise (backing).">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Net Turning</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.netTurningDeg}°</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.netTurningDeg > 0 ? '#00c8ff' : metrics.netTurningDeg < 0 ? '#ff88ff' : '#888'}; font-size: 11px;">${metrics.netTurningDeg > 0 ? 'CW' : metrics.netTurningDeg < 0 ? 'CCW' : 'Neutral'}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 4px 0; color: #888;">Max Kink</td>
+          <tr style="border-bottom: 1px solid #333;" title="Largest single heading change (sharpest corner). High values (>45°) indicate wind shear discontinuities, often associated with frontal boundaries or jet interactions.">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Max Kink</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.kinkMaxDeg}°</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.kinkMaxDeg >= 45 ? '#ff6600' : '#888'}; font-size: 11px;">${metrics.kinkMaxDeg >= 45 ? 'Shear discontinuity' : 'Smooth'}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 4px 0; color: #888;">Extension</td>
+          <tr style="border-bottom: 1px solid #333;" title="Maximum distance from origin normalized to 0-1. Higher values indicate stronger deep-layer shear. >0.6 suggests favorable shear for organized storms.">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Extension</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.extensionNorm.toFixed(2)}</td>
             <td style="padding: 4px 0 4px 8px; color: ${metrics.extensionNorm >= 0.6 ? '#00ff88' : '#888'}; font-size: 11px;">${metrics.extensionNorm >= 0.6 ? 'Strong shear' : 'Moderate'}</td>
           </tr>
-          <tr>
-            <td style="padding: 4px 0; color: #888;">Compactness</td>
+          <tr title="Mean radius divided by max radius. Lower values indicate the trace extends far in one direction (elongated). Higher values indicate uniform spread around origin.">
+            <td style="padding: 4px 0; color: #888; cursor: help;">Compactness</td>
             <td style="padding: 4px 0; text-align: right; color: #fff; font-weight: bold;">${metrics.compactness.toFixed(2)}</td>
             <td style="padding: 4px 0 4px 8px; color: #888; font-size: 11px;"></td>
           </tr>
@@ -834,9 +834,18 @@ RETURN JSON ONLY. No extra text.
 
         <h4 style="margin: 0 0 8px 0; color: #00c8ff; border-bottom: 1px solid #333; padding-bottom: 5px;">CLASSIFICATION</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
-          <tr><td style="padding: 3px 0; color: #888;">Shape</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.shapeType.replace(/_/g, ' ')}</td></tr>
-          <tr><td style="padding: 3px 0; color: #888;">Low-Level Curvature</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.lowLevelCurvature}</td></tr>
-          <tr><td style="padding: 3px 0; color: #888;">Storm Mode</td><td style="padding: 3px 0; text-align: right; color: #fff;">${labels.stormModeHint.replace(/_/g, ' ')}</td></tr>
+          <tr title="Overall hodograph shape: STRAIGHT (linear shear), CURVED (typical supercell), STRONGLY CURVED (classic supercell), LOOPED (wrap-around, strong rotation potential).">
+            <td style="padding: 3px 0; color: #888; cursor: help;">Shape</td>
+            <td style="padding: 3px 0; text-align: right; color: #fff;">${labels.shapeType.replace(/_/g, ' ')}</td>
+          </tr>
+          <tr title="Curvature in the lowest portion of the hodograph (surface to ~1km). Strong low-level curvature enhances near-surface rotation and tornado potential.">
+            <td style="padding: 3px 0; color: #888; cursor: help;">Low-Level Curvature</td>
+            <td style="padding: 3px 0; text-align: right; color: #fff;">${labels.lowLevelCurvature}</td>
+          </tr>
+          <tr title="Inferred storm mode based on hodograph characteristics. SUPERCELL indicates discrete rotating storm potential. LINEAR suggests line-type storms.">
+            <td style="padding: 3px 0; color: #888; cursor: help;">Storm Mode</td>
+            <td style="padding: 3px 0; text-align: right; color: #fff;">${labels.stormModeHint.replace(/_/g, ' ')}</td>
+          </tr>
         </table>
 
         <div style="background: ${qc.confidence >= 0.6 ? 'rgba(0,255,136,0.1)' : 'rgba(255,100,0,0.1)'}; border: 1px solid ${qc.confidence >= 0.6 ? 'rgba(0,255,136,0.3)' : 'rgba(255,100,0,0.3)'}; border-radius: 4px; padding: 8px; margin-top: 8px;">

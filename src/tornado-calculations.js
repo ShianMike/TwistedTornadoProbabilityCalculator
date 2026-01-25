@@ -63,6 +63,9 @@
     const baroclinicBonus = computeBaroclinicProxy(data) * 0.15;
     prediction += baroclinicBonus;
     
+    // Apply 20% increase to calculation
+    prediction *= 1.2;
+    
     // Clamp to reasonable bounds
     return Math.max(50, Math.min(400, prediction));
   }

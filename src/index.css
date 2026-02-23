@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/* Custom theme configuration */
+@theme {
+  --font-family-sans: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  
+  /* Custom colors */
+  --color-bg-primary: #121212;
+  --color-bg-secondary: rgba(24, 28, 47, 0.90);
+  --color-accent: #1e88e5;
+  --color-accent-cyan: #00c8ff;
+  --color-text-primary: #e6eef6;
+  --color-text-muted: #9aa3ad;
+  --color-glass-border: rgba(255, 255, 255, 0.05);
+  
+  /* EF Scale colors */
+  --color-ef0: #6b7280;
+  --color-ef1: #3b82f6;
+  --color-ef2: #10b981;
+  --color-ef3: #fbbf24;
+  --color-ef4: #f97316;
+  --color-ef5: #ef4444;
+  --color-ef5plus: #db2777;
+}
+
+/* Base styles */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+}
+
+/* Custom utilities */
+.glass-card {
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 18px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  transition: box-shadow 0.2s;
+}
+
+.glass-card:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Form input styles */
+.input-field {
+  width: 100%;
+  background-color: rgba(39, 39, 42, 0.5);
+  border: 1px solid rgb(63, 63, 70);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: white;
+}
+
+.input-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.5);
+  border-color: rgb(6, 182, 212);
+}
+
+.input-field::placeholder {
+  color: rgb(113, 113, 122);
+}
+
+.input-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(161, 161, 170);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+/* Button styles */
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: rgb(6, 182, 212);
+  color: white;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.2);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: rgb(34, 211, 238);
+  box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.3);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  background-color: rgb(39, 39, 42);
+  color: rgb(212, 212, 216);
+  border: 1px solid rgb(82, 82, 91);
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: rgb(63, 63, 70);
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
+}
+
+/* Stat display styles */
+.stat-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: rgb(161, 161, 170);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 100, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.6);
+}
+
+/* Animation utilities */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Badge styles */
+.badge-beta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: rgba(245, 158, 11, 0.2);
+  color: rgb(251, 191, 36);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}

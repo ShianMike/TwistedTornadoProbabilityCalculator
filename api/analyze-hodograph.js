@@ -170,7 +170,7 @@ Please analyze this hodograph and provide the following information:
 
 Please provide numerical estimates where possible and format your response clearly with sections.`;
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Enable CORS - allow requests from GitHub Pages
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");

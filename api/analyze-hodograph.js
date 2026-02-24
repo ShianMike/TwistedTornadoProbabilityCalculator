@@ -228,8 +228,12 @@ module.exports = async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "Server configuration error" });
+      console.error("GEMINI_API_KEY is not set");
+      return res.status(500).json({ error: "Server configuration error: API key not configured" });
     }
+
+    // Log API key presence (not the actual key)
+    console.log("API key length:", apiKey.length);
 
     // Choose prompt based on mode
     const prompt = extractGeometry ? GEOMETRY_PROMPT : ANALYSIS_PROMPT;
@@ -276,8 +280,10 @@ module.exports = async function handler(req, res) {
       } catch (_) {
         // ignore parse error
       }
+      console.error("Gemini API error:", response.status, JSON.stringify(errorData));
       return res.status(response.status).json({
-        error: errorData?.error?.message || "Gemini API error",
+        error: errorData?.error?.message || `Gemini API error: ${response.status}`,
+        details: errorData
       });
     }
 
@@ -346,7 +352,10 @@ module.exports = async function handler(req, res) {
       rateLimit: { remaining: rateLimit.remaining, limit: RATE_LIMIT },
     });
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error:", error.message, error.stack);
+    return res.status(500).json({ 
+      error: "Internal server error", 
+      message: error.message 
+    });
   }
 };

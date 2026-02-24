@@ -4,7 +4,7 @@
   "framework": "vite",
   "functions": {
     "api/analyze-hodograph.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
   },
   "rewrites": [
